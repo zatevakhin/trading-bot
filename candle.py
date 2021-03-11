@@ -1,15 +1,13 @@
 import time
-from loguru import logger
-from termcolor import colored
 
 
-class Candlestick(object):
+class Candle(object):
     def __init__(self, period=300, timestamp=None, opn=None, close=None, high=None, low=None, average=None):
         self.current = None
-        self.open = float(opn)
-        self.close = float(close)
-        self.high = float(high)
-        self.low = float(low)
+        self.open = opn
+        self.close = close
+        self.high = high
+        self.low = low
         self.timestamp = int(timestamp or time.time())
         self.period = int(period)
         self.average = float(average or 0)
@@ -22,12 +20,6 @@ class Candlestick(object):
 
     def close_time(self):
         return self.timestamp + self.period
-
-    def to_dict(self):
-        return {
-            "timestamp": self.timestamp,
-            "close": self.close,
-        }
 
     def tick(self, price):
         self.current = float(price)
@@ -51,4 +43,4 @@ class Candlestick(object):
         return self.close is not None
 
     def __repr__(self) -> str:
-        return f"<Candlestick [{self.timestamp}] Current: {self.current}, High: {self.high}, Low: {self.low}, Open: {self.open}, Close: {self.close}>"
+        return f"<Candle [{self.timestamp}] Current: {self.current}, High: {self.high}, Low: {self.low}, Open: {self.open}, Close: {self.close}>"

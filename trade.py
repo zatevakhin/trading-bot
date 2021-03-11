@@ -1,10 +1,6 @@
-from enum import Enum, auto
+from customtypes import TradeStatus
 from termcolor import colored
 from poloniex import Poloniex
-
-class TradeStatus(Enum):
-    OPEN = auto()
-    CLOSED = auto()
 
 
 class Trade(object):

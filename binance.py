@@ -3,7 +3,7 @@ import urllib
 import time
 import hmac, hashlib
 import random
-from candlestick import Candlestick
+from candle import Candle
 
 BINANCE_API_ENDPOINTS = [
     "https://api.binance.com",
@@ -30,21 +30,23 @@ class Binance:
         ret = requests.get(f"{endpoint}{api}", params=data)
         return ret.json()
 
-    def returnTicker(self, symbol):
-        params = {"symbol": symbol}
-        return self.api_query(get_api_endpoint(), "/api/v3/ticker/price", params)
+    def returnTicker(self, pair):
+        params = {"symbol": pair.fmt_binance()}
+        return self.api_query(get_api_endpoint(), "/api/v3/ticker/price", params).get("price", None)
 
-    def returnChartData(self, currencyPair: str, interval, start=None, end=None, limit=1000):
+    def returnChartData(self, pair: str, interval, start=None, end=None, limit=1000):
         interval = interval_adapter(interval)
 
-        params = {"symbol": currencyPair, "interval": interval, "startTime": start * 1000, "endTime": end * 1000, "limit": limit}
+        params = {"symbol": pair.fmt_binance(), "interval": interval, "startTime": start * 1000, "endTime": end * 1000, "limit": limit}
         params = {k: v for k, v in params.items() if v is not None}
         binance_candles = self.api_query(get_api_endpoint(), "/api/v3/klines", params)
+
+        print(binance_candles)
 
         candles = []
         for binance_candle in binance_candles:
             (o_time, o, h, l, c, v, c_time, *x) = binance_candle
-            candles.append(Candlestick(timestamp=c_time / 1000, opn=o, close=c, high=h, low=l))
+            candles.append(Candle(timestamp=c_time / 1000, opn=float(o), close=float(c), high=float(h), low=float(l)))
 
         print(len(candles))
         return candles

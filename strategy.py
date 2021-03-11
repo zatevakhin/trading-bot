@@ -1,8 +1,6 @@
-import indicators
 from trade import Trade, TradeStatus
 from chart import Chart
 
-from enum import Enum, auto
 from termcolor import colored
 import talib
 import numpy as np

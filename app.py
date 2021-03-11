@@ -2,8 +2,8 @@ from poloniex import Poloniex
 from binance import Binance
 from chart import Chart
 from strategy import Strategy
-from candlestick import Candlestick
-from trade import TradeStatus
+from candle import Candle
+from customtypes import CurrencyPair
 import argparse
 import time
 import sys
@@ -17,17 +17,13 @@ import matplotlib.gridspec as gridspec
 import pandas as pd
 
 class Cursor:
-    """
-    A cross hair cursor.
-    """
+
     def __init__(self, ax):
         self.ax = ax
-        # self.horizontal_line = ax.axhline(color='r', lw=0.8, ls='--')
         self.vertical_line = ax.axvline(color='r', lw=0.8, ls='--')
 
     def set_cross_hair_visible(self, visible):
         need_redraw = self.vertical_line.get_visible() != visible
-        # self.horizontal_line.set_visible(visible)
         self.vertical_line.set_visible(visible)
         return need_redraw
 
@@ -39,7 +35,6 @@ class Cursor:
         else:
             self.set_cross_hair_visible(True)
             self.vertical_line.set_xdata(event.xdata)
-            # self.horizontal_line.set_ydata(event.ydata)
             self.ax.figure.canvas.draw()
 
 class Application:
@@ -52,7 +47,8 @@ class Application:
         elif args.exchange in ["binance"]:
             self.exchange = Binance(userconfig.API_KEY, userconfig.SECRET)
 
-        self.pair = args.pair
+        self.pair = CurrencyPair(*args.pair.split(","))
+
         self.tick_time = int(args.tick)
         self.period = int(args.period)
         self.preload = int(args.preload)
@@ -157,9 +153,6 @@ class Application:
                         'y': trade.close_candle.close
                     })
 
-                # if trade.status == TradeStatus.CLOSED:
-                #     self
-
 
             df = self.strategy.get_indicators()
 
@@ -208,8 +201,8 @@ class Application:
         start = int(time.time()) - (self.period * self.preload)
         end = int(time.time())
 
-        candles = getChartData(self.exchange, self.pair, self.period, start, end)
-        self.chart.reset(candles)
+        candles = self.exchange.returnChartData(self.pair, self.period, start, end)
+        self.chart.reset(candles[:self.preload])
 
         # Plot
         plt.ion()
@@ -222,58 +215,31 @@ class Application:
         self.strategy.preload(self.chart.get_candles())
 
         price_axis = main_chart.add_subplot(main_chart_gs[0])
-        macd_axis = main_chart.add_subplot(main_chart_gs[1])
-
+        rsi_axis = main_chart.add_subplot(main_chart_gs[1], sharex=price_axis)
 
         plt.setp(price_axis.get_xticklabels(), rotation=20)
-        plt.setp(macd_axis.get_xticklabels(), rotation=20)
+        plt.setp(rsi_axis.get_xticklabels(), rotation=20)
 
         df = self.strategy.get_indicators()
 
         price_axis.set_facecolor("black")
-        # price_axis.set_title(f"Price of {self.pair}")
-        # price_axis.set_xlabel("Time")
 
 
-        td = pd.Timedelta('30 min')
+        rsi_axis.set_facecolor("black")
 
-        lim_min = pd.to_datetime(np.min(df["Timestamp"] - td))
-        lim_max = pd.to_datetime(np.max(df["Timestamp"] + td))
 
-        price_axis.set_xlim(lim_min, lim_max)
-        macd_axis.set_xlim(lim_min, lim_max)
-
-        macd_axis.set_facecolor("black")
-        # macd_axis.set_title(f"MACD + Signal")
-
-        (line_price, ) = price_axis.plot(df["Timestamp"], df["Price"], label='Price')
+        (line_price, ) = price_axis.step(df["Timestamp"], df["Price"], label='Price')
         (line_ema50, ) = price_axis.plot(df["Timestamp"], df["EMA50"], label='EMA50')
         (line_ema200, ) = price_axis.plot(df["Timestamp"], df["EMA200"], label='EMA200')
         price_axis.legend()
         price_axis.grid(color='r', linestyle='--', alpha=0.3)
 
-        (line_macd, ) = macd_axis.plot(df["Timestamp"], df["MACD"], label='MACD')
-        (line_macds, ) = macd_axis.plot(df["Timestamp"], df["MACDs"], label='MACDs')
+        (line_rsi, ) = rsi_axis.plot(df["Timestamp"], df["RSI"], label='RSI')
 
-        macd_axis.legend()
-        macd_axis.grid(color='r', linestyle='--', alpha=0.3)
+        rsi_axis.legend()
+        rsi_axis.grid(color='r', linestyle='--', alpha=0.3)
 
-        current_candle = Candlestick(period=self.period)
-
-        crossover_values = []
-        crossunder_values = []
-
-        for index, row in df.iterrows():
-            if row["MACD"] > row["MACDs"]:
-                crossover_values.append({'x': row["Timestamp"], 'y': row["MACD"]})
-            elif row["MACD"] < row["MACDs"]:
-                crossunder_values.append({'x': row["Timestamp"], 'y': row["MACD"]})
-
-        cr_df = pd.DataFrame(crossover_values)
-        uc_df = pd.DataFrame(crossunder_values)
-
-        macd_axis.scatter(cr_df["x"], cr_df["y"], c="green", alpha=0.5)
-        macd_axis.scatter(uc_df["x"], uc_df["y"], c="red", alpha=0.5)
+        current_candle = Candle(period=self.period)
 
         while True:
             current_candle.tick(self.chart.getCurrentPrice())
@@ -282,26 +248,23 @@ class Application:
                 self.chart.add(current_candle)
                 self.strategy.tick(current_candle)
 
-                self.cache.insert(self.pair, current_candle)
-
-                current_candle = Candlestick(period=self.period)
+                current_candle = Candle(period=self.period)
 
             df = self.strategy.get_indicators()
 
-            line_price.set_xdata(np.array(df["Timestamp"]))
-            line_price.set_ydata(np.array(df["Price"]))
+            line_price.set_data(np.array(df["Timestamp"]), np.array(df["Price"]))
 
-            line_ema50.set_xdata(np.array(df["Timestamp"]))
-            line_ema50.set_ydata(np.array(df["EMA50"]))
+            line_ema50.set_data(np.array(df["Timestamp"]), np.array(df["EMA50"]))
 
-            line_ema200.set_xdata(np.array(df["Timestamp"]))
-            line_ema200.set_ydata(np.array(df["EMA200"]))
+            line_ema200.set_data(np.array(df["Timestamp"]), np.array(df["EMA200"]))
 
-            line_macd.set_xdata(np.array(df["Timestamp"]))
-            line_macd.set_ydata(np.array(df["MACD"]))
+            line_rsi.set_data(np.array(df["Timestamp"]), np.array(df["RSI"]))
 
-            line_macds.set_xdata(np.array(df["Timestamp"]))
-            line_macds.set_ydata(np.array(df["MACDs"]))
+            price_axis.relim()
+            price_axis.autoscale_view(True,True,True)
+
+            rsi_axis.relim()
+            rsi_axis.autoscale_view(True,True,True)
 
             plt.pause(self.tick_time)
 
@@ -311,7 +274,7 @@ def main(argv):
     p.add_argument('--chart', '-G', action='store_true', help=f"Show GUI chart.")
     p.add_argument('--preload', '-l', default=300, help=f"Num old candles to preload.")
 
-    p.add_argument('--backtest', '-T', action='store_true', default=True, help=f"Backtest mode.")
+    p.add_argument('--backtest', '-T', action='store_true', default=False, help=f"Backtest mode.")
     p.add_argument('--t-start', '-S', default=None, help=f"Timespan start (used for backtesting).")
     p.add_argument('--t-end', '-E', default=None, help=f"Timespan end (used for backtesting).")
 
