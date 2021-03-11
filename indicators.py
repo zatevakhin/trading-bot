@@ -23,7 +23,7 @@ def MACD(prices, nslow=26, nfast=12):
     emafast = EMA(prices, nfast)
     return emaslow, emafast, emafast - emaslow
 
-def RSI (prices, period=14):
+def RSI(prices, period=14):
     deltas = np.diff(prices)
     seed = deltas[:period+1]
     up = seed[seed >= 0].sum()/period

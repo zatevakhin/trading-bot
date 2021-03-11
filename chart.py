@@ -6,66 +6,42 @@ def is_almost_match(a, b, error):
     return abs(a - b) <= error
 
 
-def getChartData(connection: Poloniex, pair, period, start, end, cache):
-    cached = cache.select(pair, period, start, end)
+# def getChartData(connection: Poloniex, pair, period, start, end):
+#         returned = connection.returnChartData(pair, period, start, end)
 
-    if cached:
-        cached_min = min(cached, key=lambda x: x["timestamp"])
-        min_timestamp = cached_min["timestamp"]
+#         result = []
+#         for item in returned:
+#             (date, high, low, opn, close) = (item.get("date"), item.get("high"), item.get("low"), item.get("open"), item.get("close"))
+#             candlestick = Candlestick(period, date, opn, close, high, low)
+#             result.append(candlestick)
 
-        cached_max = max(cached, key=lambda x: x["timestamp"])
-        max_timestamp = cached_max["timestamp"]
-
-        is_lower_bound_match = is_almost_match(start, min_timestamp, period)
-        is_upper_bound_match = is_almost_match(end, max_timestamp, period)
-    else:
-        is_lower_bound_match = False
-        is_upper_bound_match = False
-
-    if not (is_lower_bound_match and is_upper_bound_match):
-        print(colored(">>>", 'red'), f"Cache miss ({is_lower_bound_match}, {is_upper_bound_match})")
-
-        returned = connection.returnChartData(pair, period, start, end)
-
-        for item in returned:
-            date = item.get("date")
-            high = item.get("high")
-            low = item.get("low")
-            opn = item.get("open")
-            close = item.get("close")
-
-            candlestick = Candlestick(period, date, opn, close, high, low)
-            cache.insert(pair, candlestick)
-
-    result = []
-
-    for item in cache.select(pair, period, start, end):
-            date = item.get("timestamp")
-            high = item.get("high")
-            low = item.get("low")
-            opn = item.get("open")
-            close = item.get("close")
-
-            candlestick = Candlestick(period, date, opn, close, high, low)
-            result.append(candlestick)
-
-    return result
+#         return result
 
 
 
 class Chart(object):
-    def __init__(self, connection: Poloniex, pair):
+    def __init__(self, connection: Poloniex, pair, limit=300):
         self.pair = pair
         self.connection = connection
         self.data = []
+        self.limit = limit
 
-    def add(self, cnadlestick: Candlestick):
-        self.data.append(cnadlestick)
+    def apply_limit(self):
+        if not self.limit:
+            return
+
+        while len(self.data) > self.limit:
+            self.data.pop(0)
+
+    def add(self, candle: Candlestick):
+        self.data.append(candle)
+        self.apply_limit()
 
     def reset(self, data: list[Candlestick]):
         self.data = data
+        self.apply_limit()
 
-    def getPoints(self):
+    def get_candles(self):
         return self.data
 
     def getCurrentPrice(self):

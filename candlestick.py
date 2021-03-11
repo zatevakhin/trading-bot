@@ -6,13 +6,13 @@ from termcolor import colored
 class Candlestick(object):
     def __init__(self, period=300, timestamp=None, opn=None, close=None, high=None, low=None, average=None):
         self.current = None
-        self.open = opn
-        self.close = close
-        self.high = high
-        self.low = low
-        self.timestamp = timestamp or int(time.time())
-        self.period = period
-        self.average = average
+        self.open = float(opn)
+        self.close = float(close)
+        self.high = float(high)
+        self.low = float(low)
+        self.timestamp = int(timestamp or time.time())
+        self.period = int(period)
+        self.average = float(average or 0)
 
         if not self.average:
             prices = [self.high, self.low, self.close]
@@ -23,6 +23,11 @@ class Candlestick(object):
     def close_time(self):
         return self.timestamp + self.period
 
+    def to_dict(self):
+        return {
+            "timestamp": self.timestamp,
+            "close": self.close,
+        }
 
     def tick(self, price):
         self.current = float(price)

@@ -8,11 +8,14 @@ class TradeStatus(Enum):
 
 
 class Trade(object):
-    def __init__(self, service, currentPrice, stopLossPercent=0):
+    def __init__(self, service, currentPrice, stopLossPercent=0, candle=None):
         self.service: Poloniex = service
         self.status = TradeStatus.OPEN
         self.entryPrice = currentPrice
         self.exitPrice = 0.0
+        self.open_candle = candle
+        self.close_candle = None
+        self.stopLoss = 0
 
         print("Trade", colored("opened", 'green'))
 
@@ -21,14 +24,17 @@ class Trade(object):
         if stopLossPercent:
             self.stopLoss = (currentPrice / 100) * stopLossPercent
 
-    def close(self, currentPrice):
+    def close(self, currentPrice, candle=None):
+        self.close_candle = candle
+
         self.status = TradeStatus.CLOSED
         self.exitPrice = float(currentPrice)
         print("Trade", colored("closed", 'red'))
 
     def tick(self, currentPrice):
         if self.stopLoss:
-            if currentPrice < self.stopLoss:
+            if (self.entryPrice - self.stopLoss) >= currentPrice:
+                print(colored("STOP LOSS", 'red', attrs=["bold"]))
                 self.close(currentPrice)
 
 
@@ -40,6 +46,7 @@ class Trade(object):
            entry_price_fmt, self.status.name, exit_price_fmt
         )
 
+        pp = 0
         if self.status == TradeStatus.CLOSED:
             tradeStatus = tradeStatus + " Profit: "
 
@@ -50,4 +57,8 @@ class Trade(object):
 
             tradeStatus = f"{tradeStatus} {colored(fmt, color)}"
 
-        print(tradeStatus)
+            print(tradeStatus)
+
+            pp = profitPercent
+
+        return pp
