@@ -12,6 +12,56 @@ class CurrencyPair:
     def fmt_poloniex(self):
         return f"{self.sell}_{self.buy}"
 
+    def __repr__(self):
+        return f"{self.buy}<->{self.sell}"
+
+
 class TradeStatus(Enum):
     OPEN = auto()
     CLOSED = auto()
+
+
+class Exchange(Enum):
+    BINANCE = auto()
+    POLONIEX = auto()
+
+
+class CandleTimeInterval(Enum):
+    I_1M  = auto()
+    I_3M  = auto()
+    I_5M  = auto()
+    I_15M = auto()
+    I_30M = auto()
+    I_1H  = auto()
+    I_2H  = auto()
+    I_4H  = auto()
+    I_6H  = auto()
+    I_8H  = auto()
+    I_12H = auto()
+    I_1D  = auto()
+
+
+CANDLE_TIME_INTERVALS_POLONIEX = (
+    CandleTimeInterval.I_5M,
+    CandleTimeInterval.I_15M,
+    CandleTimeInterval.I_30M,
+    CandleTimeInterval.I_2H,
+    CandleTimeInterval.I_4H,
+    CandleTimeInterval.I_1D,
+)
+
+
+CANDLE_TIME_INTERVALS_BINANCE = (
+    CandleTimeInterval.I_1M,
+    CandleTimeInterval.I_3M,
+    CandleTimeInterval.I_5M,
+    CandleTimeInterval.I_15M,
+    CandleTimeInterval.I_30M,
+    CandleTimeInterval.I_1H,
+    CandleTimeInterval.I_2H,
+    CandleTimeInterval.I_4H,
+    CandleTimeInterval.I_6H,
+    CandleTimeInterval.I_8H,
+    CandleTimeInterval.I_12H,
+    CandleTimeInterval.I_1D,
+)

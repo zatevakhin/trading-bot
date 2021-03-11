@@ -3,6 +3,7 @@ from binance import Binance
 from chart import Chart
 from strategy import Strategy
 from candle import Candle
+from cursor import Cursor
 from customtypes import CurrencyPair
 import argparse
 import time
@@ -16,33 +17,13 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import pandas as pd
 
-class Cursor:
-
-    def __init__(self, ax):
-        self.ax = ax
-        self.vertical_line = ax.axvline(color='r', lw=0.8, ls='--')
-
-    def set_cross_hair_visible(self, visible):
-        need_redraw = self.vertical_line.get_visible() != visible
-        self.vertical_line.set_visible(visible)
-        return need_redraw
-
-    def on_mouse_move(self, event):
-        if not event.inaxes:
-            need_redraw = self.set_cross_hair_visible(False)
-            if need_redraw:
-                self.ax.figure.canvas.draw()
-        else:
-            self.set_cross_hair_visible(True)
-            self.vertical_line.set_xdata(event.xdata)
-            self.ax.figure.canvas.draw()
 
 class Application:
     def __init__(self, args):
         self.exchanges_list = []
         self.strategies_list = []
 
-        if args.exchange in ["polomiex"]:
+        if args.exchange in ["poloniex"]:
             self.exchange = Poloniex(userconfig.API_KEY, userconfig.SECRET)
         elif args.exchange in ["binance"]:
             self.exchange = Binance(userconfig.API_KEY, userconfig.SECRET)
@@ -217,14 +198,28 @@ class Application:
         price_axis = main_chart.add_subplot(main_chart_gs[0])
         rsi_axis = main_chart.add_subplot(main_chart_gs[1], sharex=price_axis)
 
+        cur_price = Cursor(price_axis)
+        cur_rsi = Cursor(rsi_axis)
+
+        def on_marker_update(evt):
+            cur_price.on_mouse_move(evt)
+            cur_rsi.on_mouse_move(evt)
+
+        main_chart.canvas.mpl_connect('motion_notify_event', on_marker_update)
+
         plt.setp(price_axis.get_xticklabels(), rotation=20)
         plt.setp(rsi_axis.get_xticklabels(), rotation=20)
 
         df = self.strategy.get_indicators()
 
+        td = pd.Timedelta('30 min')
+
+        lim_min = pd.to_datetime(np.min(df["Timestamp"] - td))
+        lim_max = pd.to_datetime(np.max(df["Timestamp"] + td))
+        price_axis.set_xlim(lim_min, lim_max)
+        rsi_axis.set_xlim(lim_min, lim_max)
+
         price_axis.set_facecolor("black")
-
-
         rsi_axis.set_facecolor("black")
 
 
