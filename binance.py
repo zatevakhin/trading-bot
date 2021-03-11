@@ -41,14 +41,11 @@ class Binance:
         params = {k: v for k, v in params.items() if v is not None}
         binance_candles = self.api_query(get_api_endpoint(), "/api/v3/klines", params)
 
-        print(binance_candles)
-
         candles = []
         for binance_candle in binance_candles:
             (o_time, o, h, l, c, v, c_time, *x) = binance_candle
             candles.append(Candle(timestamp=c_time / 1000, opn=float(o), close=float(c), high=float(h), low=float(l)))
 
-        print(len(candles))
         return candles
 
     def buy(self, currencyPair, rate, amount, immediate=False):

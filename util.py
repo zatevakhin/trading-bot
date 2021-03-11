@@ -1,7 +1,10 @@
 
 from customtypes import CandleTimeInterval, Exchange
-from customtypes import CANDLE_TIME_INTERVALS_BINANCE
-from customtypes import CANDLE_TIME_INTERVALS_POLONIEX
+
+import userconfig
+from poloniex import Poloniex
+from binance import Binance
+
 
 MAP_CUSTOM_TYPE_TO_POLONIEX = {
     CandleTimeInterval.I_5M:  "300",
@@ -50,3 +53,15 @@ def map_arg_to_custom(interval: str) -> CandleTimeInterval:
         "12h": CandleTimeInterval.I_12H,
         "1d":  CandleTimeInterval.I_1D,
     }.get(interval, None)
+
+
+
+def get_exchange_api(exchange: str):
+
+    if exchange in ["poloniex"]:
+         return Poloniex(userconfig.POLONIEX_API_KEY, userconfig.POLONIEX_SECRET)
+
+    elif exchange in ["binance"]:
+        return Binance(userconfig.BINANCE_API_KEY, userconfig.BINANCE_SECRET)
+
+    return None

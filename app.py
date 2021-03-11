@@ -1,15 +1,14 @@
-from poloniex import Poloniex
-from binance import Binance
+from util import get_exchange_api
+from customtypes import CurrencyPair
+
 from chart import Chart
 from strategy import Strategy
 from candle import Candle
 from cursor import Cursor
-from customtypes import CurrencyPair
+
 import argparse
 import time
 import sys
-
-import userconfig
 
 import numpy as np
 
@@ -18,17 +17,15 @@ import matplotlib.gridspec as gridspec
 import pandas as pd
 
 
+
 class Application:
+
     def __init__(self, args):
         self.exchanges_list = []
         self.strategies_list = []
 
-        if args.exchange in ["poloniex"]:
-            self.exchange = Poloniex(userconfig.API_KEY, userconfig.SECRET)
-        elif args.exchange in ["binance"]:
-            self.exchange = Binance(userconfig.API_KEY, userconfig.SECRET)
-
         self.pair = CurrencyPair(*args.pair.split(","))
+        self.exchange = get_exchange_api(args.exchange)
 
         self.tick_time = int(args.tick)
         self.period = int(args.period)
@@ -50,6 +47,7 @@ class Application:
     def app_backtest(self):
         start = int(time.time()) - (self.period * (self.preload * 3))
         end = int(time.time())
+
         candles = self.exchange.returnChartData(self.pair, self.period, start, end)
         self.chart.reset(candles[:self.preload])
 
@@ -137,26 +135,20 @@ class Application:
 
             df = self.strategy.get_indicators()
 
-            line_price.set_xdata(np.array(df["Timestamp"]))
-            line_price.set_ydata(np.array(df["Price"]))
+            line_price.set_data(np.array(df["Timestamp"]), np.array(df["Price"]))
 
             lim_min = pd.to_datetime(np.min(df["Timestamp"] - td))
             lim_max = pd.to_datetime(np.max(df["Timestamp"] + td))
 
-            line_ema50.set_xdata(np.array(df["Timestamp"]))
-            line_ema50.set_ydata(np.array(df["EMA50"]))
+            line_ema50.set_data(np.array(df["Timestamp"]), np.array(df["EMA50"]))
 
-            line_ema200.set_xdata(np.array(df["Timestamp"]))
-            line_ema200.set_ydata(np.array(df["EMA200"]))
+            line_ema200.set_data(np.array(df["Timestamp"]), np.array(df["EMA200"]))
 
-            line_macd.set_xdata(np.array(df["Timestamp"]))
-            line_macd.set_ydata(np.array(df["MACD"]))
+            line_macd.set_data(np.array(df["Timestamp"]), np.array(df["MACD"]))
 
-            line_macds.set_xdata(np.array(df["Timestamp"]))
-            line_macds.set_ydata(np.array(df["MACDs"]))
+            line_macds.set_data(np.array(df["Timestamp"]), np.array(df["MACDs"]))
 
-            line_rsi.set_xdata(np.array(df["Timestamp"]))
-            line_rsi.set_ydata(np.array(df["RSI"]))
+            line_rsi.set_data(np.array(df["Timestamp"]), np.array(df["RSI"]))
 
             price_axis.set_xlim(lim_min, lim_max)
             macd_axis.set_xlim(lim_min, lim_max)
@@ -256,10 +248,10 @@ class Application:
             line_rsi.set_data(np.array(df["Timestamp"]), np.array(df["RSI"]))
 
             price_axis.relim()
-            price_axis.autoscale_view(True,True,True)
+            price_axis.autoscale_view(True, True, True)
 
             rsi_axis.relim()
-            rsi_axis.autoscale_view(True,True,True)
+            rsi_axis.autoscale_view(True, True, True)
 
             plt.pause(self.tick_time)
 
