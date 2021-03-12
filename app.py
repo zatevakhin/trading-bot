@@ -23,7 +23,6 @@ class Application:
         self.exchanges_list = []
         self.strategies_list = []
 
-
         self.pair = CurrencyPair(*args.pair.split(","))
         self.exchange = get_exchange_api(args.exchange)
         self.strategies_mgr = StrategiesManager("strategies/")
@@ -31,13 +30,15 @@ class Application:
         self.tick_time = int(args.tick)
         self.period = int(args.period)
         self.preload = int(args.preload)
+
         self.backtest = bool(args.backtest)
+
+        self.start_time = int(args.t_start)
+        self.start_end = int(args.t_end)
 
         self.chart = Chart(self.exchange, self.pair, None)
 
         strategy = self.strategies_mgr.get_strategy(args.strategy)
-
-        print(strategy)
 
         self.strategy = strategy(self.chart, self.exchange)
 
@@ -51,21 +52,16 @@ class Application:
 
 
     def app_backtest(self):
-        day_s = ((60 * 60) * 24)
 
-        start = int(1615573320 - day_s) - (self.period * self.preload)
-        end = int(1615573320)
+        start = int(self.start_time) - (self.period * self.preload)
+        end = int(self.start_end)
 
         candles = self.exchange.returnChartData(self.pair, self.period, start, end)
         self.chart.reset(candles[:self.preload])
 
         candles = candles[self.preload:]
 
-
         self.strategy.preload(self.chart.get_candles())
-
-        # Plot
-        # plt.ion()
 
         main_chart = plt.figure(facecolor='gray')
 
@@ -278,7 +274,7 @@ def main(argv):
     p.add_argument('--period-help', '-P', action='store_true', help=f"Show period help.")
 
     p.add_argument('--exchange', '-e', default=None, help=f"Exchange used for trading.")
-    p.add_argument('--strategy', '-s', default=None, help=f"Trading strategy.")
+    p.add_argument('--strategy', '-s', default='default', help=f"Trading strategy.")
 
     p.add_argument('--list-exchanges', default=None, help=f"Show available exchanges.")
     p.add_argument('--list-strategies', default=None, help=f"Show available strategies.")
