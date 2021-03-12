@@ -110,3 +110,14 @@ class StrategiesManager(object):
             founded_strategy[addon.__strategy__] = addon
 
         return founded_strategy
+
+
+def frame_trend(df, n, indicator, callback):
+    elements = list(df.iloc[-n:][indicator])
+    previous = elements.pop(0)
+
+    comparations = []
+    for current in elements:
+        comparations.append(callback(previous, current))
+
+    return comparations.count(True) > comparations.count(False)

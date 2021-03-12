@@ -1,6 +1,7 @@
 from trade import Trade, TradeStatus
 from chart import Chart
 from customtypes import IStrategy
+from util import frame_trend
 
 from termcolor import colored
 import talib
@@ -23,13 +24,9 @@ class Default(IStrategy):
     def preload(self, candle_list):
         self.chart.reset(candle_list)
 
-        df = self.get_indicators()
-
-
     def on_tick(self, candle):
         self.chart.add(candle)
         self.currentPrice = float(candle.average)
-
         df = self.get_indicators()
 
         open_trades = []
@@ -44,26 +41,13 @@ class Default(IStrategy):
 
         print(f"Pair: {pair_fmt} Price: {price_fmt} Open trades {open_trades_fmt}")
 
+        # strategy tick
+        self.tick(candle, open_trades, df)
 
-        def is_falling(n, indicator):
-            p_x = 0
-            x_a = []
-            for x in list(df.iloc[-n:][indicator]):
-                x_a.append(p_x >= x)
-                p_x = x
+        self.update_open_trades()
+        self.show_positions()
 
-            return x_a.count(False) > x_a.count(True)
-
-        def frame_trend(df, n, indicator, callback):
-            elements = list(df.iloc[-n:][indicator])
-            previous = elements.pop(0)
-
-            comparations = []
-            for current in elements:
-                comparations.append(callback(previous, current))
-
-            return comparations.count(True) > comparations.count(False)
-
+    def tick(self, candle, open_trades, df):
         prev_row = df.iloc[-2]
         prev_MACD = prev_row["MACD"]
         prev_MACDs = prev_row["MACDs"]
@@ -90,7 +74,6 @@ class Default(IStrategy):
         curr_ema_50_200_diff = abs(ema_50 - ema_200)
 
         ema_50_falling_x = frame_trend(df, 3, "EMA50", operator.gt)
-        ema_50_rising_x = not is_falling(3, "EMA50")
 
         is_price_falling = frame_trend(df, 5, "Price", operator.lt)
         is_price_rising = frame_trend(df, 2, "Price", operator.ge)
@@ -118,12 +101,6 @@ class Default(IStrategy):
             if ema_50_falling or rsi_overbought and is_price_rising: # with rsi is better
                 for trade in open_trades:
                         trade.close(self.currentPrice, candle=candle)
-
-
-
-        self.update_open_trades()
-        self.show_positions()
-
 
     def get_indicators(self):
         candles = self.chart.get_candles()
