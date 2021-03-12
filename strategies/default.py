@@ -9,7 +9,7 @@ import pandas as pd
 
 import functools, operator
 
-class Strategy(IStrategy):
+class Default(IStrategy):
     __strategy__ = 'default'
 
     def __init__(self, chart, exchange):
