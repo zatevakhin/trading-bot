@@ -1,8 +1,7 @@
-from util import get_exchange_api
+from util import get_exchange_api, StrategiesManager
 from customtypes import CurrencyPair
 
 from chart import Chart
-from strategy import Strategy
 from candle import Candle
 from cursor import Cursor
 
@@ -24,8 +23,10 @@ class Application:
         self.exchanges_list = []
         self.strategies_list = []
 
+
         self.pair = CurrencyPair(*args.pair.split(","))
         self.exchange = get_exchange_api(args.exchange)
+        self.strategies_mgr = StrategiesManager("strategies/")
 
         self.tick_time = int(args.tick)
         self.period = int(args.period)
@@ -33,7 +34,12 @@ class Application:
         self.backtest = bool(args.backtest)
 
         self.chart = Chart(self.exchange, self.pair, None)
-        self.strategy = Strategy(self.chart, self.exchange)
+
+        strategy = self.strategies_mgr.get_strategy(args.strategy)
+
+        print(strategy)
+
+        self.strategy = strategy(self.chart, self.exchange)
 
 
     def run(self):
@@ -45,8 +51,10 @@ class Application:
 
 
     def app_backtest(self):
-        start = int(time.time()) - (self.period * (self.preload * 3))
-        end = int(time.time())
+        day_s = ((60 * 60) * 24)
+
+        start = int(1615573320 - day_s) - (self.period * self.preload)
+        end = int(1615573320)
 
         candles = self.exchange.returnChartData(self.pair, self.period, start, end)
         self.chart.reset(candles[:self.preload])
@@ -54,8 +62,6 @@ class Application:
         candles = candles[self.preload:]
 
 
-        data_list = []
-        self.strategy.set_dataframe(data_list)
         self.strategy.preload(self.chart.get_candles())
 
         # Plot
@@ -94,7 +100,7 @@ class Application:
         lim_max = pd.to_datetime(np.max(df["Timestamp"] + td))
         price_axis.set_xlim(lim_min, lim_max)
 
-        (line_price, ) = price_axis.plot(df["Timestamp"], df["Price"], label='Price')
+        (line_price, ) = price_axis.step(df["Timestamp"], df["Price"], label='Price')
         (line_ema50, ) = price_axis.plot(df["Timestamp"], df["EMA50"], label='EMA50')
         (line_ema200, ) = price_axis.plot(df["Timestamp"], df["EMA200"], label='EMA200')
         price_axis.legend()
@@ -116,8 +122,7 @@ class Application:
         close_trades_candles = []
 
         for candle in candles:
-            self.strategy.tick(candle)
-            self.chart.add(candle)
+            self.strategy.on_tick(candle)
 
             for trade in self.strategy.trades:
                 if trade.open_candle:
@@ -160,10 +165,10 @@ class Application:
         cc_df = pd.DataFrame(close_trades_candles)
 
         if open_trades_candles:
-            price_axis.scatter(oc_df["x"], oc_df["y"], c="green")
+            price_axis.scatter(oc_df["x"], oc_df["y"], c="green", zorder=10)
 
         if close_trades_candles:
-            price_axis.scatter(cc_df["x"], cc_df["y"], c="red")
+            price_axis.scatter(cc_df["x"], cc_df["y"], c="red", zorder=10)
 
 
         plt.show()
@@ -184,8 +189,6 @@ class Application:
         main_chart = plt.figure(facecolor='gray')
         main_chart_gs = gridspec.GridSpec(ncols=1, nrows=3, figure=main_chart)
 
-        data_list = []
-        self.strategy.set_dataframe(data_list)
         self.strategy.preload(self.chart.get_candles())
 
         price_axis = main_chart.add_subplot(main_chart_gs[0])
@@ -227,16 +230,18 @@ class Application:
         rsi_axis.legend()
         rsi_axis.grid(color='r', linestyle='--', alpha=0.3)
 
-        current_candle = Candle(interval=self.period)
+        current_candle = None
 
         while True:
+            if not current_candle:
+                current_candle = Candle(interval=self.period)
+
             current_candle.tick(self.chart.getCurrentPrice())
 
             if current_candle.isClosed():
-                self.chart.add(current_candle)
-                self.strategy.tick(current_candle)
+                self.strategy.on_tick(current_candle)
 
-                current_candle = Candle(interval=self.period)
+                current_candle = None
 
             df = self.strategy.get_indicators()
 
