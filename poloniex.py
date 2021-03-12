@@ -1,7 +1,10 @@
 import requests
+from loguru import logger
 import urllib
 import time
 import hmac, hashlib
+
+from candle import Candle
 
 POLONIEX_PUBLIC_API = "https://poloniex.com/public"
 POLONIEX_PRIVATE_API = "https://poloniex.com/tradingApi"
@@ -10,26 +13,14 @@ POLONIEX_PRIVATE_API = "https://poloniex.com/tradingApi"
 def createTimeStamp(datestr, fmt="%Y-%m-%d %H:%M:%S"):
     return time.mktime(time.strptime(datestr, fmt))
 
+class ApiQueryError(Exception):
+    pass
+
 
 class Poloniex:
     def __init__(self, api_key, secret):
         self.api_key = str(api_key)
         self.secret = str(secret)
-
-    def post_process(self, before):
-        after = before
-
-        # Add timestamps if there isnt one but is a datetime
-        if "return" in after:
-            if isinstance(after["return"], list):
-                for x in range(0, len(after["return"])):
-                    if isinstance(after["return"][x], dict):
-                        if "datetime" in after["return"][x] and "timestamp" not in after["return"][x]:
-                            after["return"][x]["timestamp"] = float(
-                                createTimeStamp(after["return"][x]["datetime"])
-                            )
-
-        return after
 
     def api_query(self, api: str, command: str, data: dict = {}):
         ret: requests.Response = None
@@ -51,24 +42,36 @@ class Poloniex:
             headers = {"Sign": sign, "Key": self.api_key}
 
             ret = requests.post(f"{api}", data=post_data, headers=headers)
-            print(ret.content)
-            # post_process
         else:
             assert(True, "Wat?")
 
-        return ret.json()
+        data = ret.json()
 
-    def returnTicker(self):
+        if 'error' in data:
+            raise ApiQueryError(data)
+
+        return data
+
+    def returnTicker(self, pair):
         # https://docs.poloniex.com/#returnticker
-        return self.api_query(POLONIEX_PUBLIC_API, "returnTicker")
+
+        data = self.api_query(POLONIEX_PUBLIC_API, "returnTicker")
+        return data.get(pair.fmt_poloniex(), {}).get("last")
 
     def return24hVolume(self):
         # https://docs.poloniex.com/#return24hvolume
         return self.api_query(POLONIEX_PUBLIC_API, "return24hVolume")
 
-    def returnChartData(self, currencyPair, period, start, end):
-        params = {"currencyPair": currencyPair, "period": period, "start": start, "end": end}
-        return self.api_query(POLONIEX_PUBLIC_API, "returnChartData", params)
+    def returnChartData(self, pair, period, start, end):
+        params = {"currencyPair": pair.fmt_poloniex(), "period": period, "start": start, "end": end}
+        poloniex_candles = self.api_query(POLONIEX_PUBLIC_API, "returnChartData", params)
+
+        candles = []
+        for item in poloniex_candles:
+            (t, h, l, o, c) = (item["date"], item["high"], item["low"], item["open"], item["close"])
+            candles.append(Candle(timestamp=t, opn=float(o), close=float(c), high=float(h), low=float(l)))
+
+        return candles
 
     def returnOrderBook(self, currencyPair):
         # https://docs.poloniex.com/#returnorderbook

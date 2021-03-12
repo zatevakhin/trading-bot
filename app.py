@@ -175,6 +175,7 @@ class Application:
         end = int(time.time())
 
         candles = self.exchange.returnChartData(self.pair, self.period, start, end)
+
         self.chart.reset(candles[:self.preload])
 
         # Plot
@@ -226,7 +227,7 @@ class Application:
         rsi_axis.legend()
         rsi_axis.grid(color='r', linestyle='--', alpha=0.3)
 
-        current_candle = Candle(period=self.period)
+        current_candle = Candle(interval=self.period)
 
         while True:
             current_candle.tick(self.chart.getCurrentPrice())
@@ -235,7 +236,7 @@ class Application:
                 self.chart.add(current_candle)
                 self.strategy.tick(current_candle)
 
-                current_candle = Candle(period=self.period)
+                current_candle = Candle(interval=self.period)
 
             df = self.strategy.get_indicators()
 

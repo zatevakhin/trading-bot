@@ -2,14 +2,14 @@ import time
 
 
 class Candle(object):
-    def __init__(self, period=300, timestamp=None, opn=None, close=None, high=None, low=None, average=None):
+    def __init__(self, interval=300, timestamp=None, opn=None, close=None, high=None, low=None, average=None):
         self.current = None
         self.open = opn
         self.close = close
         self.high = high
         self.low = low
         self.timestamp = int(timestamp or time.time())
-        self.period = int(period)
+        self.interval = int(interval)
         self.average = float(average or 0)
 
         if not self.average:
@@ -19,7 +19,7 @@ class Candle(object):
                 self.average = sum(prices) / 3
 
     def close_time(self):
-        return self.timestamp + self.period
+        return self.timestamp + self.interval
 
     def tick(self, price):
         self.current = float(price)
@@ -27,17 +27,15 @@ class Candle(object):
         if self.open is None:
             self.open = self.current
 
-        if (self.high is None) or (self.current > self.high):
+        if self.high is None or self.current > self.high:
             self.high = self.current
 
-        if (self.low is None) or (self.current < self.low):
+        if self.low is None or self.current < self.low:
             self.low = self.current
 
-        if time.time() >= (self.timestamp + self.period):
+        if time.time() >= (self.timestamp + self.interval):
             self.close = self.current
             self.average = (self.high + self.low + self.close) / float(3)
-
-        # print(self)
 
     def isClosed(self):
         return self.close is not None
