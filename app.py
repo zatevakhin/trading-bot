@@ -1,5 +1,5 @@
-from util import get_exchange_api, StrategiesManager
-from customtypes import CurrencyPair
+from util import get_exchange_api, StrategiesManager, mode_mapper
+from customtypes import CurrencyPair, TradingMode
 
 from chart import Chart
 from candle import Candle
@@ -39,22 +39,27 @@ class Application:
         self.period = int(args.period)
         self.preload = int(args.preload)
 
-        self.backtest = bool(args.backtest)
+        self.mode = mode_mapper(args.mode)
 
-        self.start_time = int(args.t_start)
-        self.start_end = end_time(args.t_end)
+        self.start_time = int(args.t_start or 0)
+        self.start_end = end_time(args.t_end or 0)
 
         self.chart = Chart(self.exchange, self.pair, None)
 
         strategy = self.strategies_mgr.get_strategy(args.strategy)
 
-        self.strategy = strategy(self.chart, self.exchange)
+        budget = int(args.budget or 0)
+
+        if not budget and self.mode in [TradingMode.LIVE]:
+            raise ValueError("Budget should be more that '0' for live trading.")
+
+        self.strategy = strategy(self.mode, args.budget, self.chart, self.exchange)
         print(args.strategy, self.strategy)
 
 
     def run(self):
 
-        if self.backtest:
+        if self.mode in [TradingMode.BACKTEST]:
             self.app_backtest()
         else:
             self.app_live()
@@ -203,18 +208,21 @@ class Application:
 
         price_axis = main_chart.add_subplot(main_chart_gs[0])
         rsi_axis = main_chart.add_subplot(main_chart_gs[1], sharex=price_axis)
+        dmi_axis = main_chart.add_subplot(main_chart_gs[2], sharex=price_axis)
 
         cur_price = Cursor(price_axis)
         cur_rsi = Cursor(rsi_axis)
+        cur_dmi = Cursor(dmi_axis)
 
         def on_marker_update(evt):
             cur_price.on_mouse_move(evt)
             cur_rsi.on_mouse_move(evt)
+            cur_dmi.on_mouse_move(evt)
 
         main_chart.canvas.mpl_connect('motion_notify_event', on_marker_update)
 
-        plt.setp(price_axis.get_xticklabels(), rotation=20)
-        plt.setp(rsi_axis.get_xticklabels(), rotation=20)
+        # plt.setp(price_axis.get_xticklabels(), rotation=20)
+        # plt.setp(rsi_axis.get_xticklabels(), rotation=20)
 
         df = self.strategy.get_indicators()
 
@@ -227,6 +235,7 @@ class Application:
 
         price_axis.set_facecolor("black")
         rsi_axis.set_facecolor("black")
+        dmi_axis.set_facecolor("black")
 
         (line_price, ) = price_axis.step(df["Timestamp"], df["Price.c"], label='Price close')
         (line_ema50, ) = price_axis.plot(df["Timestamp"], df["EMA50"], label='EMA50')
@@ -238,6 +247,13 @@ class Application:
 
         rsi_axis.legend()
         rsi_axis.grid(color='r', linestyle='--', alpha=0.3)
+
+        (line_adx, ) = dmi_axis.plot(df["Timestamp"], df["ADX"], label='ADX')
+        (line_di_p, ) = dmi_axis.plot(df["Timestamp"], df["DI+"], label='DI+')
+        (line_di_m, ) = dmi_axis.plot(df["Timestamp"], df["DI-"], label='DI-')
+
+        dmi_axis.legend()
+        dmi_axis.grid(color='r', linestyle='--', alpha=0.3)
 
         current_candle = None
 
@@ -262,11 +278,18 @@ class Application:
 
             line_rsi.set_data(np.array(df["Timestamp"]), np.array(df["RSI"]))
 
+            line_adx.set_data(np.array(df["Timestamp"]), np.array(df["ADX"]))
+            line_di_p.set_data(np.array(df["Timestamp"]), np.array(df["DI+"]))
+            line_di_m.set_data(np.array(df["Timestamp"]), np.array(df["DI-"]))
+
             price_axis.relim()
             price_axis.autoscale_view(True, True, True)
 
             rsi_axis.relim()
             rsi_axis.autoscale_view(True, True, True)
+
+            dmi_axis.relim()
+            dmi_axis.autoscale_view(True, True, True)
 
             plt.pause(self.tick_time)
 
@@ -276,12 +299,13 @@ def main(argv):
     p.add_argument('--chart', '-G', action='store_true', help=f"Show GUI chart.")
     p.add_argument('--preload', '-l', default=300, help=f"Num old candles to preload.")
 
-    p.add_argument('--backtest', '-T', action='store_true', default=False, help=f"Backtest mode.")
+    p.add_argument('--mode', '-m', default='live', help=f"Trading modes (backtest, live_test, live)")
     p.add_argument('--t-start', '-S', default=None, help=f"Timespan start (used for backtesting).")
     p.add_argument('--t-end', '-E', default=None, help=f"Timespan end (used for backtesting).")
 
-    p.add_argument('--pair', '-c', default='USDT_BTC', help=f"Currency pair.")
-    p.add_argument('--tick', '-t', default=30, help=f"Candle update timespan.")
+    p.add_argument('--pair', '-c', default='BTC,USDT', help=f"Currency pair. ex. BTC,USDT.")
+    p.add_argument('--tick', '-t', default=60, help=f"Candle update timespan.")
+    p.add_argument('--budget', '-b', default=None, help=f"Budget used to by crypto in currency which second param in pair.")
 
     p.add_argument('--period', '-p', default=300, help=f"Timespan width for candle.")
     p.add_argument('--period-help', '-P', action='store_true', help=f"Show period help.")

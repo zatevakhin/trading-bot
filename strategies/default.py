@@ -1,6 +1,6 @@
 from trade import Trade, TradeStatus
 from chart import Chart
-from customtypes import IStrategy
+from customtypes import IStrategy, TradingMode, CurrencyPair
 from util import frame_trend
 
 from termcolor import colored
@@ -13,9 +13,12 @@ import functools, operator
 class Strategy(IStrategy):
     __strategy__ = 'default'
 
-    def __init__(self, chart, exchange):
+    def __init__(self, mode, budget, chart, exchange):
         self.exchange = exchange
         self.chart: Chart = chart
+        self.pair: CurrencyPair = self.chart.pair
+        self.mode: TradingMode = mode
+        self.budget = budget
 
         self.trades = []
         self.currentPrice = 0
@@ -72,7 +75,7 @@ class Strategy(IStrategy):
 
         ema_50_falling_x = frame_trend(df, 3, "EMA50", operator.gt)
 
-        is_price_falling = frame_trend(df, 5, "Price.c", operator.gt)
+        is_price_falling = frame_trend(df, 3, "Price.c", operator.gt)
         is_price_rising = frame_trend(df, 2, "Price.c", operator.lt)
 
         is_rsi_rising = frame_trend(df, 3, "RSI", operator.lt)
@@ -86,20 +89,22 @@ class Strategy(IStrategy):
         rsi_oversold_light = current_RSI <= 40
         rsi_oversold = current_RSI < 30
 
+        trade = Trade(self.pair, self.budget, self.mode, self.exchange, 5.0)
+
         if can_open_new_trade:
             if price_lower_that_ema_50 or price_lower_that_ema_200:
                 if is_price_falling:
-                    trade = Trade(self.exchange, self.currentPrice, stopLossPercent=5.0, candle=candle)
-                    self.trades.append(trade)
+                    if trade.open(candle):
+                        self.trades.append(trade)
 
         if rsi_overbought_crit:
             for trade in open_trades:
-                trade.close(self.currentPrice, candle=candle)
+                trade.close(candle)
 
         elif ema_50_200_golden_cross:
             if ema_50_falling or is_rsi_rising: # with rsi is better
                 for trade in open_trades:
-                        trade.close(self.currentPrice, candle=candle)
+                        trade.close(candle)
 
         # ---------------------------------------------------------------------
 

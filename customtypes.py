@@ -18,6 +18,7 @@ class CurrencyPair:
 
 
 class TradeStatus(Enum):
+    CREATED = auto()
     OPEN = auto()
     CLOSED = auto()
 
@@ -26,6 +27,10 @@ class Exchange(Enum):
     BINANCE = auto()
     POLONIEX = auto()
 
+class TradingMode(Enum):
+    BACKTEST = auto()
+    LIVE_TEST = auto()
+    LIVE = auto()
 
 class CandleTimeInterval(Enum):
     I_1M  = auto()

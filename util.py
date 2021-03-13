@@ -1,5 +1,5 @@
 
-from customtypes import CandleTimeInterval, Exchange, IStrategy
+from customtypes import CandleTimeInterval, Exchange, IStrategy, TradingMode
 
 import userconfig
 from poloniex import Poloniex
@@ -57,6 +57,14 @@ def map_arg_to_custom(interval: str) -> CandleTimeInterval:
         "12h": CandleTimeInterval.I_12H,
         "1d":  CandleTimeInterval.I_1D,
     }.get(interval, None)
+
+
+def mode_mapper(mode: str) -> TradingMode:
+    return {
+        "backtest":  TradingMode.BACKTEST,
+        "live-test": TradingMode.LIVE_TEST,
+        "live":      TradingMode.LIVE,
+    }.get(mode)
 
 
 

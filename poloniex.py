@@ -73,9 +73,9 @@ class Poloniex:
 
         return candles
 
-    def returnOrderBook(self, currencyPair):
+    def returnOrderBook(self, pair):
         # https://docs.poloniex.com/#returnorderbook
-        params = {"currencyPair": currencyPair}
+        params = {"currencyPair": pair.fmt_poloniex()}
         return self.api_query(POLONIEX_PUBLIC_API, "returnOrderBook", params)
 
     def returnMarketTradeHistory(self, currencyPair):
@@ -90,46 +90,46 @@ class Poloniex:
         # https://docs.poloniex.com/#returnbalances
         return self.api_query(POLONIEX_PRIVATE_API, "returnBalances")
 
-    def returnOpenOrders(self, currencyPair):
+    def returnOpenOrders(self, pair):
         # Returns your open orders for a given market, specified by the "currencyPair" POST parameter, e.g. "BTC_ETH".
         #  Set "currencyPair" to "all" to return open orders for all markets.
 
         # https://docs.poloniex.com/#returnopenorders
-        params = {"currencyPair": currencyPair}
+        params = {"currencyPair": pair.fmt_poloniex()}
         return self.api_query(POLONIEX_PRIVATE_API, "returnOpenOrders", params)
 
-    def returnTradeHistory(self, currencyPair):
+    def returnTradeHistory(self, pair):
         # Returns your trade history for a given market, specified by the "currencyPair" POST parameter.
         # You may specify "all" as the currencyPair to receive your trade history for all markets.
 
         # https://docs.poloniex.com/#returntradehistory-private
-        params = {"currencyPair": currencyPair}
+        params = {"currencyPair": pair.fmt_poloniex()}
         return self.api_query(POLONIEX_PRIVATE_API, "returnTradeHistory", params)
 
-    def buy(self, currencyPair, rate, amount, immediate=False):
+    def buy(self, pair, rate, amount, fill_or_kill=False):
         # Places a limit buy order in a given market. Required POST parameters are "currencyPair", "rate", and "amount".
         # If successful, the method will return the order number.
 
         # https://docs.poloniex.com/#buy
-        params = {"currencyPair": currencyPair, "rate": rate, "amount": amount}
-        if immediate:
-            params.update({"immediateOrCancel": int(immediate)})
+        params = {"currencyPair": pair.fmt_poloniex(), "rate": rate, "amount": amount}
+        if fill_or_kill:
+            params.update({"fillOrKill": int(fill_or_kill)})
 
         return self.api_query(POLONIEX_PRIVATE_API, "buy", params)
 
-    def sell(self, currencyPair, rate, amount):
+    def sell(self, pair, rate, amount):
         # Places a sell order in a given market. Required POST parameters are "currencyPair", "rate", and "amount".
         # If successful, the method will return the order number.
 
         # https://docs.poloniex.com/#sell
-        params = {"currencyPair": currencyPair, "rate": rate, "amount": amount}
+        params = {"currencyPair": pair.fmt_poloniex(), "rate": rate, "amount": amount}
         return self.api_query(POLONIEX_PRIVATE_API, "sell", params)
 
-    def cancel(self, currencyPair, orderNumber):
+    def cancel(self, pair, orderNumber):
         # Cancels an order you have placed in a given market. Requires exactly one of "orderNumber" or "clientOrderId" POST parameters.
         # If successful, the method will return a success of 1.
 
         # https://docs.poloniex.com/#cancelorder
-        params = {"currencyPair": currencyPair, "orderNumber": orderNumber}
+        params = {"currencyPair": pair.fmt_poloniex(), "orderNumber": orderNumber}
         return self.api_query(POLONIEX_PRIVATE_API, "cancelOrder", params)
 
