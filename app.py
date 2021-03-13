@@ -16,6 +16,14 @@ import matplotlib.gridspec as gridspec
 import pandas as pd
 
 
+def end_time(t):
+    end_t = 0
+    if t in ['now']:
+        end_t = int(time.time())
+    else:
+        end_t = int(t)
+
+    return end_t
 
 class Application:
 
@@ -34,13 +42,14 @@ class Application:
         self.backtest = bool(args.backtest)
 
         self.start_time = int(args.t_start)
-        self.start_end = int(args.t_end)
+        self.start_end = end_time(args.t_end)
 
         self.chart = Chart(self.exchange, self.pair, None)
 
         strategy = self.strategies_mgr.get_strategy(args.strategy)
 
         self.strategy = strategy(self.chart, self.exchange)
+        print(args.strategy, self.strategy)
 
 
     def run(self):
@@ -69,24 +78,24 @@ class Application:
         main_chart_gs = gridspec.GridSpec(ncols=1, nrows=3, figure=main_chart)
 
         price_axis = main_chart.add_subplot(main_chart_gs[0])
-        macd_axis = main_chart.add_subplot(main_chart_gs[1], sharex=price_axis)
-        rsi_axis = main_chart.add_subplot(main_chart_gs[2], sharex=price_axis)
+        rsi_axis = main_chart.add_subplot(main_chart_gs[1], sharex=price_axis)
+        dmi_axis = main_chart.add_subplot(main_chart_gs[2], sharex=price_axis)
 
         cur_price = Cursor(price_axis)
-        cur_macd = Cursor(macd_axis)
         cur_rsi = Cursor(rsi_axis)
+        cur_dmi = Cursor(dmi_axis)
 
         def on_marker_update(evt):
             cur_price.on_mouse_move(evt)
-            cur_macd.on_mouse_move(evt)
             cur_rsi.on_mouse_move(evt)
+            cur_dmi.on_mouse_move(evt)
 
         main_chart.canvas.mpl_connect('motion_notify_event', on_marker_update)
 
 
         price_axis.set_facecolor("black")
-        macd_axis.set_facecolor("black")
         rsi_axis.set_facecolor("black")
+        dmi_axis.set_facecolor("black")
 
         df = self.strategy.get_indicators()
 
@@ -96,22 +105,23 @@ class Application:
         lim_max = pd.to_datetime(np.max(df["Timestamp"] + td))
         price_axis.set_xlim(lim_min, lim_max)
 
-        (line_price, ) = price_axis.step(df["Timestamp"], df["Price"], label='Price')
+        (line_price, ) = price_axis.step(df["Timestamp"], df["Price.c"], label='Price close')
         (line_ema50, ) = price_axis.plot(df["Timestamp"], df["EMA50"], label='EMA50')
         (line_ema200, ) = price_axis.plot(df["Timestamp"], df["EMA200"], label='EMA200')
         price_axis.legend()
         price_axis.grid(color='r', linestyle='--', alpha=0.3)
 
-        (line_macd, ) = macd_axis.plot(df["Timestamp"], df["MACD"], label='MACD')
-        (line_macds, ) = macd_axis.plot(df["Timestamp"], df["MACDs"], label='MACDs')
-
-        macd_axis.legend()
-        macd_axis.grid(color='r', linestyle='--', alpha=0.3)
-
         (line_rsi, ) = rsi_axis.plot(df["Timestamp"], df["RSI"], label='RSI')
 
         rsi_axis.legend()
         rsi_axis.grid(color='r', linestyle='--', alpha=0.3)
+
+        (line_adx, ) = dmi_axis.plot(df["Timestamp"], df["ADX"], label='ADX')
+        (line_di_p, ) = dmi_axis.plot(df["Timestamp"], df["DI+"], label='DI+')
+        (line_di_m, ) = dmi_axis.plot(df["Timestamp"], df["DI-"], label='DI-')
+
+        dmi_axis.legend()
+        dmi_axis.grid(color='r', linestyle='--', alpha=0.3)
 
 
         open_trades_candles = []
@@ -136,7 +146,7 @@ class Application:
 
             df = self.strategy.get_indicators()
 
-            line_price.set_data(np.array(df["Timestamp"]), np.array(df["Price"]))
+            line_price.set_data(np.array(df["Timestamp"]), np.array(df["Price.c"]))
 
             lim_min = pd.to_datetime(np.min(df["Timestamp"] - td))
             lim_max = pd.to_datetime(np.max(df["Timestamp"] + td))
@@ -145,17 +155,21 @@ class Application:
 
             line_ema200.set_data(np.array(df["Timestamp"]), np.array(df["EMA200"]))
 
-            line_macd.set_data(np.array(df["Timestamp"]), np.array(df["MACD"]))
-
-            line_macds.set_data(np.array(df["Timestamp"]), np.array(df["MACDs"]))
-
             line_rsi.set_data(np.array(df["Timestamp"]), np.array(df["RSI"]))
 
-            price_axis.set_xlim(lim_min, lim_max)
-            macd_axis.set_xlim(lim_min, lim_max)
-            rsi_axis.set_xlim(lim_min, lim_max)
+            line_adx.set_data(np.array(df["Timestamp"]), np.array(df["ADX"]))
+            line_di_p.set_data(np.array(df["Timestamp"]), np.array(df["DI+"]))
+            line_di_m.set_data(np.array(df["Timestamp"]), np.array(df["DI-"]))
 
-            # plt.pause(self.tick_time)
+
+            price_axis.relim()
+            price_axis.autoscale_view(True, True, True)
+
+            rsi_axis.relim()
+            rsi_axis.autoscale_view(True, True, True)
+
+            dmi_axis.relim()
+            dmi_axis.autoscale_view(True, True, True)
 
         oc_df = pd.DataFrame(open_trades_candles)
         cc_df = pd.DataFrame(close_trades_candles)
@@ -214,8 +228,7 @@ class Application:
         price_axis.set_facecolor("black")
         rsi_axis.set_facecolor("black")
 
-
-        (line_price, ) = price_axis.step(df["Timestamp"], df["Price"], label='Price')
+        (line_price, ) = price_axis.step(df["Timestamp"], df["Price.c"], label='Price close')
         (line_ema50, ) = price_axis.plot(df["Timestamp"], df["EMA50"], label='EMA50')
         (line_ema200, ) = price_axis.plot(df["Timestamp"], df["EMA200"], label='EMA200')
         price_axis.legend()
@@ -241,7 +254,7 @@ class Application:
 
             df = self.strategy.get_indicators()
 
-            line_price.set_data(np.array(df["Timestamp"]), np.array(df["Price"]))
+            line_price.set_data(np.array(df["Timestamp"]), np.array(df["Price.c"]))
 
             line_ema50.set_data(np.array(df["Timestamp"]), np.array(df["EMA50"]))
 

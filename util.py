@@ -121,3 +121,6 @@ def frame_trend(df, n, indicator, callback):
         comparations.append(callback(previous, current))
 
     return comparations.count(True) > comparations.count(False)
+
+def almost_equal(a, b, e):
+    return abs(a - b) < e

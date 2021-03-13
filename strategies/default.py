@@ -10,7 +10,7 @@ import pandas as pd
 
 import functools, operator
 
-class Default(IStrategy):
+class Strategy(IStrategy):
     __strategy__ = 'default'
 
     def __init__(self, chart, exchange):
@@ -49,16 +49,13 @@ class Default(IStrategy):
 
     def tick(self, candle, open_trades, df):
         prev_row = df.iloc[-2]
-        prev_MACD = prev_row["MACD"]
-        prev_MACDs = prev_row["MACDs"]
 
         prev_ema_50 = prev_row["EMA50"]
         prev_ema_200 = prev_row["EMA200"]
 
         curr_row = df.iloc[-1]
         current_RSI = curr_row["RSI"]
-        current_MACD = curr_row["MACD"]
-        current_MACDs = curr_row["MACDs"]
+
         ema_50 = curr_row["EMA50"]
         ema_200 = curr_row["EMA200"]
 
@@ -75,8 +72,10 @@ class Default(IStrategy):
 
         ema_50_falling_x = frame_trend(df, 3, "EMA50", operator.gt)
 
-        is_price_falling = frame_trend(df, 5, "Price", operator.lt)
-        is_price_rising = frame_trend(df, 2, "Price", operator.ge)
+        is_price_falling = frame_trend(df, 5, "Price.c", operator.gt)
+        is_price_rising = frame_trend(df, 2, "Price.c", operator.lt)
+
+        is_rsi_rising = frame_trend(df, 3, "RSI", operator.lt)
 
         price_lower_that_ema_200 = ema_200 > self.currentPrice
         price_lower_that_ema_50 = ema_50 > self.currentPrice
@@ -98,27 +97,60 @@ class Default(IStrategy):
                 trade.close(self.currentPrice, candle=candle)
 
         elif ema_50_200_golden_cross:
-            if ema_50_falling or rsi_overbought and is_price_rising: # with rsi is better
+            if ema_50_falling or is_rsi_rising: # with rsi is better
                 for trade in open_trades:
                         trade.close(self.currentPrice, candle=candle)
+
+        # ---------------------------------------------------------------------
+
+        # if can_open_new_trade:
+        #     if ema_50_200_dead_cross:
+        #         # if prev_ema_50_200_diff > curr_ema_50_200_diff:
+        #         # if ema_50_rising and price_lower_that_ema_50:
+        #         if price_lower_that_ema_50 and not is_rsi_rising:
+        #                 self.trades.append(Trade(self.exchange, self.currentPrice, stopLossPercent=5.0, candle=candle))
+
+        #     # elif rsi_oversold and price_lower_that_ema_50:
+        #     #     self.trades.append(Trade(self.exchange, self.currentPrice, stopLossPercent=5.0, candle=candle))
+
+        # if ema_50_200_golden_cross:
+
+        #     # if curr_ema_50_200_diff > prev_ema_50_200_diff: # with rsi is better
+        #     if ema_50_falling or rsi_overbought: # with rsi is better
+        #         for trade in open_trades:
+        #                 trade.close(self.currentPrice, candle=candle)
+
+        # elif rsi_overbought_crit:
+        #     for trade in open_trades:
+        #         trade.close(self.currentPrice, candle=candle)
 
     def get_indicators(self):
         candles = self.chart.get_candles()
 
-        prices = list(map(lambda x: x.close, candles))
-        np_prices = np.array(prices)
+        prices_close = list(map(lambda x: x.close, candles))
+        np_prices_close = np.array(prices_close)
+
+        prices_open = list(map(lambda x: x.open, candles))
+        np_prices_open = np.array(prices_open)
+
+        prices_high = list(map(lambda x: x.high, candles))
+        np_prices_high = np.array(prices_high)
+
+        prices_low = list(map(lambda x: x.low, candles))
+        np_prices_low = np.array(prices_low)
 
         timestamps = list(map(lambda x: pd.to_datetime(x.timestamp, unit='s'), candles))
 
-        macd, macd_s, _ = talib.MACD(np_prices, fastperiod=12, slowperiod=26, signalperiod=9)
+        rsi = talib.RSI(np_prices_close, timeperiod=14)
+        adx = talib.ADX(np_prices_high, np_prices_low, np_prices_close, timeperiod=14)
+        di_minus = talib.MINUS_DI(np_prices_high, np_prices_low, np_prices_close, timeperiod=14)
+        di_plus = talib.PLUS_DI(np_prices_high, np_prices_low, np_prices_close, timeperiod=14)
 
-        rsi = talib.RSI(np_prices, timeperiod=14)
+        ema_50 = talib.EMA(np_prices_close, timeperiod=50)
+        ema_200 = talib.EMA(np_prices_close, timeperiod=200)
 
-        ema_50 = talib.EMA(np_prices, timeperiod=50)
-        ema_200 = talib.EMA(np_prices, timeperiod=200)
-
-        zipped = zip(timestamps, np_prices, macd, macd_s, rsi, ema_50, ema_200)
-        columns = ["Timestamp", "Price", "MACD", "MACDs", "RSI", "EMA50", "EMA200"]
+        zipped = zip(timestamps, np_prices_close, np_prices_high, np_prices_low, rsi, ema_50, ema_200, adx, di_minus, di_plus)
+        columns = ["Timestamp", "Price.c", "Price.h", "Price.l", "RSI", "EMA50", "EMA200", "ADX", "DI-", "DI+"]
 
         return pd.DataFrame(zipped, columns=columns)
 
