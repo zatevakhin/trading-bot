@@ -1,9 +1,26 @@
 import requests
-import urllib
+from urllib.parse import urljoin, urlencode
 import time
 import hmac, hashlib
 import random
 from candle import Candle
+from enum import Enum, auto
+
+
+class BinanceException(Exception):
+    def __init__(self, status_code, data):
+
+        self.status_code = status_code
+        if data:
+            self.code = data['code']
+            self.msg = data['msg']
+        else:
+            self.code = None
+            self.msg = None
+        message = f"{status_code} [{self.code}] {self.msg}"
+
+        super().__init__(message)
+
 
 BINANCE_API_ENDPOINTS = [
     "https://api.binance.com",
@@ -12,10 +29,22 @@ BINANCE_API_ENDPOINTS = [
     "https://api3.binance.com"
 ]
 
+class TimeInForceStatus(Enum):
+    GTC = 'GTC'	# Good Til Canceled An order will be on the book unless the order is canceled.
+    IOC = 'IOC'	# Immediate Or Cancel An order will try to fill the order as much as it can before the order expires.
+    FOK = 'FOC'	# Fill or Kill An order will expire if the full order cannot be filled upon execution.
+
+class CRUDType(Enum):
+    GET = auto()
+    POST = auto()
+    DELETE = auto()
+
+
+def createTimeStamp():
+    return time.mktime(time.strptime(datestr, fmt))
+
 def interval_adapter(interval):
-    return ({
-        '300' : '5m'
-    }).get(str(interval))
+    return {'300' : '5m'}[str(interval)]
 
 def get_api_endpoint():
     return random.choice(BINANCE_API_ENDPOINTS)
@@ -29,6 +58,34 @@ class Binance:
     def api_query(self, endpoint: str, api: str, data: dict = {}):
         ret = requests.get(f"{endpoint}{api}", params=data)
         return ret.json()
+
+    def api_query_private(self, crudType: CRUDType, command: str, data: dict = {}):  
+        headers = {
+            'X-MBX-APIKEY': self.api_key
+        }
+
+        data['timestamp'] = int(time.time() * 1000)
+        data['recvWindow'] = 5000
+        query_string = urlencode(data)
+        data['signature'] = hmac.new(self.secret.encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256).hexdigest()
+        url = urljoin(get_api_endpoint(), command)
+        
+        
+        if crudType is crudType.POST:
+            resp = requests.post(url, headers=headers, params=data)
+        elif crudType is crudType.DELETE:
+            resp = requests.delete(url, headers=headers, params=data)
+        else:
+            raise ValueError('WTF type')
+
+        if resp.status_code == 200:
+            data = resp.json()
+            # print(json.dumps(data, indent=2))
+        else:
+            raise BinanceException(status_code=resp.status_code, data=resp.json())
+
+        return resp.json()
+
 
     def returnTicker(self, pair):
         params = {"symbol": pair.fmt_binance()}
@@ -48,30 +105,46 @@ class Binance:
 
         return candles
 
-    def buy(self, currencyPair, rate, amount, immediate=False):
-        # Places a limit buy order in a given market. Required POST parameters are "currencyPair", "rate", and "amount".
-        # If successful, the method will return the order number.
+    def buy(self, pair, quantity, price, timeInForceStatus=TimeInForceStatus.GTC):
+        params = {
+            'symbol': pair.fmt_binance(),
+            'side': 'BUY',
+            'type': 'LIMIT',
+            'timeInForce': timeInForceStatus.value,
+            'quantity': quantity,
+            'price': price
+        }
 
-        # https://docs.poloniex.com/#buy
-        params = {"currencyPair": currencyPair, "rate": rate, "amount": amount}
-        if immediate:
-            params.update({"immediateOrCancel": int(immediate)})
+        return self.api_query_private(CRUDType.POST, '/api/v3/order', params)
 
-        return self.api_query(get_api_endpoint(), "buy", params)
+    def sell(self, pair, quantity, price, timeInForceStatus=TimeInForceStatus.GTC):
+        params = {
+            'symbol': pair.fmt_binance(),
+            'side': 'SELL',
+            'type': 'LIMIT',
+            'timeInForce': timeInForceStatus.value,
+            'quantity': quantity,
+            'price': price
+        }
 
-    def sell(self, currencyPair, rate, amount):
-        # Places a sell order in a given market. Required POST parameters are "currencyPair", "rate", and "amount".
-        # If successful, the method will return the order number.
+        return self.api_query_private(CRUDType.POST, '/api/v3/order', params)
 
-        # https://docs.poloniex.com/#sell
-        params = {"currencyPair": currencyPair, "rate": rate, "amount": amount}
-        return self.api_query(get_api_endpoint(), "sell", params)
+    def cancel(self, pair, orderId):
+        PATH = '/api/v3/order'
+        params = {
+            'symbol': pair.fmt_binance(),
+            'orderId': orderId
+        }
 
-    def cancel(self, currencyPair, orderNumber):
-        # Cancels an order you have placed in a given market. Requires exactly one of "orderNumber" or "clientOrderId" POST parameters.
-        # If successful, the method will return a success of 1.
+        return self.api_query_private(CRUDType.DELETE, '/api/v3/order', params)
 
-        # https://docs.poloniex.com/#cancelorder
-        params = {"currencyPair": currencyPair, "orderNumber": orderNumber}
-        return self.api_query(get_api_endpoint(), "cancelOrder", params)
 
+# from customtypes import IStrategy, TradingMode, CurrencyPair
+
+# API_KEY = 'lol'
+# SECRET_KEY = 'kek'
+
+# if __name__ == "__main__":
+#     api = Binance(API_KEY, SECRET_KEY)
+#     pair = CurrencyPair('DOGE', 'USDT')
+#     print(api.buy(pair, 200, 0.05))
