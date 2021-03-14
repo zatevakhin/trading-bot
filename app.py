@@ -48,14 +48,13 @@ class Application:
 
         strategy = self.strategies_mgr.get_strategy(args.strategy)
 
-        budget = int(args.budget or 0)
+        budget = float(args.budget or 0)
 
         if not budget and self.mode in [TradingMode.LIVE]:
             raise ValueError("Budget should be more that '0' for live trading.")
 
-        self.strategy = strategy(self.mode, args.budget, self.chart, self.exchange)
+        self.strategy = strategy(self.mode, budget, self.chart, self.exchange)
         print(args.strategy, self.strategy)
-
 
     def run(self):
 
@@ -95,6 +94,7 @@ class Application:
             cur_rsi.on_mouse_move(evt)
             cur_dmi.on_mouse_move(evt)
 
+        main_chart.canvas.set_window_title(str(self.pair))
         main_chart.canvas.mpl_connect('motion_notify_event', on_marker_update)
 
 
@@ -219,6 +219,7 @@ class Application:
             cur_rsi.on_mouse_move(evt)
             cur_dmi.on_mouse_move(evt)
 
+        main_chart.canvas.set_window_title(str(self.pair))
         main_chart.canvas.mpl_connect('motion_notify_event', on_marker_update)
 
         # plt.setp(price_axis.get_xticklabels(), rotation=20)

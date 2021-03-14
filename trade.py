@@ -3,8 +3,7 @@ from customtypes import TradeStatus
 from termcolor import colored
 from poloniex import Poloniex, ApiQueryError
 from customtypes import TradingMode
-import itertools
-import operator
+
 
 class Trade(object):
     def __init__(self, pair, budget, mode, exchange, stop_loss_percent):
@@ -46,8 +45,8 @@ class Trade(object):
 
             resulting_trades = trade.get('resultingTrades', [])
 
-            bought_list = map(lambda t: t['takerAdjustment'], resulting_trades)
-            self.bought_amount = itertools.accumulate(bought_list, operator.add)
+            bought_list = map(lambda t: float(t['takerAdjustment']), resulting_trades)
+            self.bought_amount = sum(bought_list)
 
         print("Trade", colored("opened", 'green'))
 
