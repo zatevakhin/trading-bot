@@ -1,19 +1,17 @@
-from util import get_exchange_api, StrategiesManager, mode_mapper
-from customtypes import CurrencyPair, TradingMode
-
-from chart import Chart
-from candle import Candle
-from cursor import Cursor
-
 import argparse
-import time
 import sys
+import time
 
-import numpy as np
-
-import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+
+from candle import Candle
+from chart import Chart
+from cursor import Cursor
+from customtypes import CurrencyPair, TradingMode
+from util import StrategiesManager, get_exchange_api, mode_mapper
 
 
 def end_time(t):
@@ -25,8 +23,8 @@ def end_time(t):
 
     return end_t
 
-class Application:
 
+class Application:
     def __init__(self, args):
         self.exchanges_list = []
         self.strategies_list = []
@@ -51,7 +49,8 @@ class Application:
         budget = float(args.budget or 0)
 
         if not budget and self.mode in [TradingMode.LIVE]:
-            raise ValueError("Budget should be more that '0' for live trading.")
+            raise ValueError(
+                "Budget should be more that '0' for live trading.")
 
         self.strategy = strategy(self.mode, budget, self.chart, self.exchange)
         print(args.strategy, self.strategy)
@@ -63,13 +62,13 @@ class Application:
         else:
             self.app_live()
 
-
     def app_backtest(self):
 
         start = int(self.start_time) - (self.period * self.preload)
         end = int(self.start_end)
 
-        candles = self.exchange.returnChartData(self.pair, self.period, start, end)
+        candles = self.exchange.returnChartData(self.pair, self.period, start,
+                                                end)
         self.chart.reset(candles[:self.preload])
 
         candles = candles[self.preload:]
@@ -77,7 +76,6 @@ class Application:
         self.strategy.preload(self.chart.get_candles())
 
         main_chart = plt.figure(facecolor='gray')
-
 
         main_chart_gs = gridspec.GridSpec(ncols=1, nrows=3, figure=main_chart)
 
@@ -97,7 +95,6 @@ class Application:
         main_chart.canvas.set_window_title(str(self.pair))
         main_chart.canvas.mpl_connect('motion_notify_event', on_marker_update)
 
-
         price_axis.set_facecolor("black")
         rsi_axis.set_facecolor("black")
         dmi_axis.set_facecolor("black")
@@ -110,9 +107,15 @@ class Application:
         lim_max = pd.to_datetime(np.max(df["Timestamp"] + td))
         price_axis.set_xlim(lim_min, lim_max)
 
-        (line_price, ) = price_axis.step(df["Timestamp"], df["Price.c"], label='Price close')
-        (line_ema50, ) = price_axis.plot(df["Timestamp"], df["EMA50"], label='EMA50')
-        (line_ema200, ) = price_axis.plot(df["Timestamp"], df["EMA200"], label='EMA200')
+        (line_price, ) = price_axis.step(df["Timestamp"],
+                                         df["Price.c"],
+                                         label='Price close')
+        (line_ema50, ) = price_axis.plot(df["Timestamp"],
+                                         df["EMA50"],
+                                         label='EMA50')
+        (line_ema200, ) = price_axis.plot(df["Timestamp"],
+                                          df["EMA200"],
+                                          label='EMA200')
         price_axis.legend()
         price_axis.grid(color='r', linestyle='--', alpha=0.3)
 
@@ -128,7 +131,6 @@ class Application:
         dmi_axis.legend()
         dmi_axis.grid(color='r', linestyle='--', alpha=0.3)
 
-
         open_trades_candles = []
         close_trades_candles = []
 
@@ -138,34 +140,39 @@ class Application:
             for trade in self.strategy.trades:
                 if trade.open_candle:
                     open_trades_candles.append({
-                        'x': pd.to_datetime(trade.open_candle.timestamp, unit='s'),
-                        'y': trade.open_candle.close
+                        'x':
+                        pd.to_datetime(trade.open_candle.timestamp, unit='s'),
+                        'y':
+                        trade.open_candle.close
                     })
 
                 if trade.close_candle:
                     close_trades_candles.append({
-                        'x': pd.to_datetime(trade.close_candle.timestamp, unit='s'),
-                        'y': trade.close_candle.close
+                        'x':
+                        pd.to_datetime(trade.close_candle.timestamp, unit='s'),
+                        'y':
+                        trade.close_candle.close
                     })
-
 
             df = self.strategy.get_indicators()
 
-            line_price.set_data(np.array(df["Timestamp"]), np.array(df["Price.c"]))
+            line_price.set_data(np.array(df["Timestamp"]),
+                                np.array(df["Price.c"]))
 
             lim_min = pd.to_datetime(np.min(df["Timestamp"] - td))
             lim_max = pd.to_datetime(np.max(df["Timestamp"] + td))
 
-            line_ema50.set_data(np.array(df["Timestamp"]), np.array(df["EMA50"]))
+            line_ema50.set_data(np.array(df["Timestamp"]),
+                                np.array(df["EMA50"]))
 
-            line_ema200.set_data(np.array(df["Timestamp"]), np.array(df["EMA200"]))
+            line_ema200.set_data(np.array(df["Timestamp"]),
+                                 np.array(df["EMA200"]))
 
             line_rsi.set_data(np.array(df["Timestamp"]), np.array(df["RSI"]))
 
             line_adx.set_data(np.array(df["Timestamp"]), np.array(df["ADX"]))
             line_di_p.set_data(np.array(df["Timestamp"]), np.array(df["DI+"]))
             line_di_m.set_data(np.array(df["Timestamp"]), np.array(df["DI-"]))
-
 
             price_axis.relim()
             price_axis.autoscale_view(True, True, True)
@@ -185,16 +192,15 @@ class Application:
         if close_trades_candles:
             price_axis.scatter(cc_df["x"], cc_df["y"], c="red", zorder=10)
 
-
         plt.show()
-
 
     def app_live(self):
 
         start = int(time.time()) - (self.period * self.preload)
         end = int(time.time())
 
-        candles = self.exchange.returnChartData(self.pair, self.period, start, end)
+        candles = self.exchange.returnChartData(self.pair, self.period, start,
+                                                end)
 
         self.chart.reset(candles[:self.preload])
 
@@ -238,9 +244,15 @@ class Application:
         rsi_axis.set_facecolor("black")
         dmi_axis.set_facecolor("black")
 
-        (line_price, ) = price_axis.step(df["Timestamp"], df["Price.c"], label='Price close')
-        (line_ema50, ) = price_axis.plot(df["Timestamp"], df["EMA50"], label='EMA50')
-        (line_ema200, ) = price_axis.plot(df["Timestamp"], df["EMA200"], label='EMA200')
+        (line_price, ) = price_axis.step(df["Timestamp"],
+                                         df["Price.c"],
+                                         label='Price close')
+        (line_ema50, ) = price_axis.plot(df["Timestamp"],
+                                         df["EMA50"],
+                                         label='EMA50')
+        (line_ema200, ) = price_axis.plot(df["Timestamp"],
+                                          df["EMA200"],
+                                          label='EMA200')
         price_axis.legend()
         price_axis.grid(color='r', linestyle='--', alpha=0.3)
 
@@ -271,11 +283,14 @@ class Application:
 
             df = self.strategy.get_indicators()
 
-            line_price.set_data(np.array(df["Timestamp"]), np.array(df["Price.c"]))
+            line_price.set_data(np.array(df["Timestamp"]),
+                                np.array(df["Price.c"]))
 
-            line_ema50.set_data(np.array(df["Timestamp"]), np.array(df["EMA50"]))
+            line_ema50.set_data(np.array(df["Timestamp"]),
+                                np.array(df["EMA50"]))
 
-            line_ema200.set_data(np.array(df["Timestamp"]), np.array(df["EMA200"]))
+            line_ema200.set_data(np.array(df["Timestamp"]),
+                                 np.array(df["EMA200"]))
 
             line_rsi.set_data(np.array(df["Timestamp"]), np.array(df["RSI"]))
 
@@ -297,30 +312,68 @@ class Application:
 
 def main(argv):
     p = argparse.ArgumentParser()
-    p.add_argument('--chart', '-G', action='store_true', help=f"Show GUI chart.")
-    p.add_argument('--preload', '-l', default=300, help=f"Num old candles to preload.")
+    p.add_argument('--chart',
+                   '-G',
+                   action='store_true',
+                   help=f"Show GUI chart.")
+    p.add_argument('--preload',
+                   '-l',
+                   default=300,
+                   help=f"Num old candles to preload.")
 
-    p.add_argument('--mode', '-m', default='live', help=f"Trading modes (backtest, live_test, live)")
-    p.add_argument('--t-start', '-S', default=None, help=f"Timespan start (used for backtesting).")
-    p.add_argument('--t-end', '-E', default=None, help=f"Timespan end (used for backtesting).")
+    p.add_argument('--mode',
+                   '-m',
+                   default='live',
+                   help=f"Trading modes (backtest, live_test, live)")
+    p.add_argument('--t-start',
+                   '-S',
+                   default=None,
+                   help=f"Timespan start (used for backtesting).")
+    p.add_argument('--t-end',
+                   '-E',
+                   default=None,
+                   help=f"Timespan end (used for backtesting).")
 
-    p.add_argument('--pair', '-c', default='BTC,USDT', help=f"Currency pair. ex. BTC,USDT.")
+    p.add_argument('--pair',
+                   '-c',
+                   default='BTC,USDT',
+                   help=f"Currency pair. ex. BTC,USDT.")
     p.add_argument('--tick', '-t', default=60, help=f"Candle update timespan.")
-    p.add_argument('--budget', '-b', default=None, help=f"Budget used to by crypto in currency which second param in pair.")
+    p.add_argument(
+        '--budget',
+        '-b',
+        default=None,
+        help=f"Budget used to by crypto in currency which second param in pair."
+    )
 
-    p.add_argument('--period', '-p', default=300, help=f"Timespan width for candle.")
-    p.add_argument('--period-help', '-P', action='store_true', help=f"Show period help.")
+    p.add_argument('--period',
+                   '-p',
+                   default=300,
+                   help=f"Timespan width for candle.")
+    p.add_argument('--period-help',
+                   '-P',
+                   action='store_true',
+                   help=f"Show period help.")
 
-    p.add_argument('--exchange', '-e', default=None, help=f"Exchange used for trading.")
-    p.add_argument('--strategy', '-s', default='default', help=f"Trading strategy.")
+    p.add_argument('--exchange',
+                   '-e',
+                   default=None,
+                   help=f"Exchange used for trading.")
+    p.add_argument('--strategy',
+                   '-s',
+                   default='default',
+                   help=f"Trading strategy.")
 
-    p.add_argument('--list-exchanges', default=None, help=f"Show available exchanges.")
-    p.add_argument('--list-strategies', default=None, help=f"Show available strategies.")
-
+    p.add_argument('--list-exchanges',
+                   default=None,
+                   help=f"Show available exchanges.")
+    p.add_argument('--list-strategies',
+                   default=None,
+                   help=f"Show available strategies.")
 
     app = Application(p.parse_args())
     app.run()
 
+
 if __name__ == "__main__":
     main(sys.argv[1:])
-

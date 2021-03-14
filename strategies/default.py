@@ -1,14 +1,15 @@
-from trade import Trade, TradeStatus
-from chart import Chart
-from customtypes import IStrategy, TradingMode, CurrencyPair
-from util import frame_trend
+import functools
+import operator
 
-from termcolor import colored
-import talib
 import numpy as np
 import pandas as pd
+import talib
+from chart import Chart
+from customtypes import CurrencyPair, IStrategy, TradingMode
+from termcolor import colored
+from trade import Trade, TradeStatus
+from util import frame_trend
 
-import functools, operator
 
 class Strategy(IStrategy):
     __strategy__ = 'default'
@@ -41,8 +42,9 @@ class Strategy(IStrategy):
         pair_fmt = colored("{}".format(self.chart.pair), 'yellow')
         open_trades_fmt = colored("{}".format(len(open_trades)), 'magenta')
 
-
-        print(f"Pair: {pair_fmt} Price: {price_fmt} Open trades {open_trades_fmt}")
+        print(
+            f"Pair: {pair_fmt} Price: {price_fmt} Open trades {open_trades_fmt}"
+        )
 
         # strategy tick
         self.tick(candle, open_trades, df)
@@ -102,9 +104,9 @@ class Strategy(IStrategy):
                 trade.close(candle)
 
         elif ema_50_200_golden_cross:
-            if ema_50_falling or is_rsi_rising: # with rsi is better
+            if ema_50_falling or is_rsi_rising:  # with rsi is better
                 for trade in open_trades:
-                        trade.close(candle)
+                    trade.close(candle)
 
         # ---------------------------------------------------------------------
 
@@ -144,21 +146,35 @@ class Strategy(IStrategy):
         prices_low = list(map(lambda x: x.low, candles))
         np_prices_low = np.array(prices_low)
 
-        timestamps = list(map(lambda x: pd.to_datetime(x.timestamp, unit='s'), candles))
+        timestamps = list(
+            map(lambda x: pd.to_datetime(x.timestamp, unit='s'), candles))
 
         rsi = talib.RSI(np_prices_close, timeperiod=14)
-        adx = talib.ADX(np_prices_high, np_prices_low, np_prices_close, timeperiod=14)
-        di_minus = talib.MINUS_DI(np_prices_high, np_prices_low, np_prices_close, timeperiod=14)
-        di_plus = talib.PLUS_DI(np_prices_high, np_prices_low, np_prices_close, timeperiod=14)
+        adx = talib.ADX(np_prices_high,
+                        np_prices_low,
+                        np_prices_close,
+                        timeperiod=14)
+        di_minus = talib.MINUS_DI(np_prices_high,
+                                  np_prices_low,
+                                  np_prices_close,
+                                  timeperiod=14)
+        di_plus = talib.PLUS_DI(np_prices_high,
+                                np_prices_low,
+                                np_prices_close,
+                                timeperiod=14)
 
         ema_50 = talib.EMA(np_prices_close, timeperiod=50)
         ema_200 = talib.EMA(np_prices_close, timeperiod=200)
 
-        zipped = zip(timestamps, np_prices_close, np_prices_high, np_prices_low, rsi, ema_50, ema_200, adx, di_minus, di_plus)
-        columns = ["Timestamp", "Price.c", "Price.h", "Price.l", "RSI", "EMA50", "EMA200", "ADX", "DI-", "DI+"]
+        zipped = zip(timestamps, np_prices_close, np_prices_high,
+                     np_prices_low, rsi, ema_50, ema_200, adx, di_minus,
+                     di_plus)
+        columns = [
+            "Timestamp", "Price.c", "Price.h", "Price.l", "RSI", "EMA50",
+            "EMA200", "ADX", "DI-", "DI+"
+        ]
 
         return pd.DataFrame(zipped, columns=columns)
-
 
     def update_open_trades(self):
         for trade in self.trades:

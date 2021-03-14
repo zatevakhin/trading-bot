@@ -1,5 +1,6 @@
 from candle import Candle
 
+
 class Chart(object):
     def __init__(self, exchange, pair, limit=300):
         self.pair = pair

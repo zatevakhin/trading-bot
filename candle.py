@@ -2,7 +2,14 @@ import time
 
 
 class Candle(object):
-    def __init__(self, interval=300, timestamp=None, opn=None, close=None, high=None, low=None, average=None):
+    def __init__(self,
+                 interval=300,
+                 timestamp=None,
+                 opn=None,
+                 close=None,
+                 high=None,
+                 low=None,
+                 average=None):
         self.current = None
         self.open = opn
         self.close = close

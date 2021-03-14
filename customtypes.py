@@ -1,5 +1,6 @@
-from candle import Candle
 from enum import Enum, auto
+
+from candle import Candle
 
 
 class CurrencyPair:
@@ -27,24 +28,26 @@ class Exchange(Enum):
     BINANCE = auto()
     POLONIEX = auto()
 
+
 class TradingMode(Enum):
     BACKTEST = auto()
     LIVE_TEST = auto()
     LIVE = auto()
 
+
 class CandleTimeInterval(Enum):
-    I_1M  = auto()
-    I_3M  = auto()
-    I_5M  = auto()
+    I_1M = auto()
+    I_3M = auto()
+    I_5M = auto()
     I_15M = auto()
     I_30M = auto()
-    I_1H  = auto()
-    I_2H  = auto()
-    I_4H  = auto()
-    I_6H  = auto()
-    I_8H  = auto()
+    I_1H = auto()
+    I_2H = auto()
+    I_4H = auto()
+    I_6H = auto()
+    I_8H = auto()
     I_12H = auto()
-    I_1D  = auto()
+    I_1D = auto()
 
 
 CANDLE_TIME_INTERVALS_POLONIEX = (
@@ -55,7 +58,6 @@ CANDLE_TIME_INTERVALS_POLONIEX = (
     CandleTimeInterval.I_4H,
     CandleTimeInterval.I_1D,
 )
-
 
 CANDLE_TIME_INTERVALS_BINANCE = (
     CandleTimeInterval.I_1M,
@@ -72,6 +74,7 @@ CANDLE_TIME_INTERVALS_BINANCE = (
     CandleTimeInterval.I_1D,
 )
 
+
 class IStrategy(object):
     __strategy__ = None
 
@@ -80,6 +83,3 @@ class IStrategy(object):
 
     def on_tick(self, candle: Candle):
         raise NotImplementedError
-
-
-

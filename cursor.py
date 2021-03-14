@@ -1,6 +1,4 @@
-
 class Cursor:
-
     def __init__(self, ax):
         self.ax = ax
         self.vertical_line = ax.axvline(color='r', lw=0.8, ls='--')

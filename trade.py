@@ -1,8 +1,8 @@
-from candle import Candle
-from customtypes import TradeStatus
 from termcolor import colored
-from poloniex import Poloniex, ApiQueryError
-from customtypes import TradingMode
+
+from candle import Candle
+from customtypes import TradeStatus, TradingMode
+from poloniex import ApiQueryError, Poloniex
 
 
 class Trade(object):
@@ -21,8 +21,8 @@ class Trade(object):
 
         self.bought_amount = None
 
-        assert (stop_loss_percent <= 100.0 or stop_loss_percent >= 0.0), "Incorrect stop loss limit!"
-
+        assert (stop_loss_percent <= 100.0
+                or stop_loss_percent >= 0.0), "Incorrect stop loss limit!"
 
     def open(self, candle: Candle):
         self.open_candle = candle
@@ -37,7 +37,8 @@ class Trade(object):
             amount = (self.budget / self.entry_price)
 
             try:
-                trade = self.exchange.buy(self.pair, self.entry_price, amount, True)
+                trade = self.exchange.buy(self.pair, self.entry_price, amount,
+                                          True)
             except ApiQueryError:
                 return
 
@@ -45,7 +46,8 @@ class Trade(object):
 
             resulting_trades = trade.get('resultingTrades', [])
 
-            bought_list = map(lambda t: float(t['takerAdjustment']), resulting_trades)
+            bought_list = map(lambda t: float(t['takerAdjustment']),
+                              resulting_trades)
             self.bought_amount = sum(bought_list)
 
         print("Trade", colored("opened", 'green'))
@@ -60,8 +62,10 @@ class Trade(object):
         print("Trade", colored("closed", 'red'))
 
         if self.mode in [TradingMode.LIVE]:
-            print("exchange.sell", self.exchange.sell(self.pair, self.exit_price, self.bought_amount))
-
+            print(
+                "exchange.sell",
+                self.exchange.sell(self.pair, self.exit_price,
+                                   self.bought_amount))
 
     def tick(self, currentPrice):
         if self.stop_loss:
@@ -69,14 +73,16 @@ class Trade(object):
                 print(colored("STOP LOSS", 'red', attrs=["bold"]))
                 self.close(currentPrice)
 
-
     def showTrade(self):
-        entry_price_fmt = colored("{:0.8f}".format(self.entry_price), "grey", attrs=["bold"])
-        exit_price_fmt = colored("{:0.8f}".format(self.exit_price), "white", attrs=["bold"])
+        entry_price_fmt = colored("{:0.8f}".format(self.entry_price),
+                                  "grey",
+                                  attrs=["bold"])
+        exit_price_fmt = colored("{:0.8f}".format(self.exit_price),
+                                 "white",
+                                 attrs=["bold"])
 
         tradeStatus = "Entry Price: {}, Status: {} Exit Price: {}".format(
-           entry_price_fmt, self.status.name, exit_price_fmt
-        )
+            entry_price_fmt, self.status.name, exit_price_fmt)
 
         pp = 0
         if self.status == TradeStatus.CLOSED:

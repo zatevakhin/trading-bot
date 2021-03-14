@@ -1,37 +1,33 @@
-
-from customtypes import CandleTimeInterval, Exchange, IStrategy, TradingMode
-
-import userconfig
-from poloniex import Poloniex
-from binance import Binance
-
 import importlib
 import os
 
-
+import userconfig
+from binance import Binance
+from customtypes import CandleTimeInterval, Exchange, IStrategy, TradingMode
+from poloniex import Poloniex
 
 MAP_CUSTOM_TYPE_TO_POLONIEX = {
-    CandleTimeInterval.I_5M:  "300",
+    CandleTimeInterval.I_5M: "300",
     CandleTimeInterval.I_15M: "900",
     CandleTimeInterval.I_30M: "1800",
-    CandleTimeInterval.I_2H:  "7200",
-    CandleTimeInterval.I_4H:  "14400",
-    CandleTimeInterval.I_1D:  "86400"
+    CandleTimeInterval.I_2H: "7200",
+    CandleTimeInterval.I_4H: "14400",
+    CandleTimeInterval.I_1D: "86400"
 }
 
 MAP_CUSTOM_TYPE_TO_BINANCE = {
-    CandleTimeInterval.I_1M:  "1m",
-    CandleTimeInterval.I_3M:  "3m",
-    CandleTimeInterval.I_5M:  "5m",
+    CandleTimeInterval.I_1M: "1m",
+    CandleTimeInterval.I_3M: "3m",
+    CandleTimeInterval.I_5M: "5m",
     CandleTimeInterval.I_15M: "15m",
     CandleTimeInterval.I_30M: "30m",
-    CandleTimeInterval.I_1H:  "1h",
-    CandleTimeInterval.I_2H:  "2h",
-    CandleTimeInterval.I_4H:  "4h",
-    CandleTimeInterval.I_6H:  "6h",
-    CandleTimeInterval.I_8H:  "8h",
+    CandleTimeInterval.I_1H: "1h",
+    CandleTimeInterval.I_2H: "2h",
+    CandleTimeInterval.I_4H: "4h",
+    CandleTimeInterval.I_6H: "6h",
+    CandleTimeInterval.I_8H: "8h",
     CandleTimeInterval.I_12H: "12h",
-    CandleTimeInterval.I_1D:  "1d",
+    CandleTimeInterval.I_1D: "1d",
 }
 
 EXCHANGES_INTERVALS_MAP = {
@@ -39,39 +35,42 @@ EXCHANGES_INTERVALS_MAP = {
     Exchange.BINANCE: MAP_CUSTOM_TYPE_TO_BINANCE
 }
 
-def map_interval_for_exchange(exchange: Exchange, interval: CandleTimeInterval) -> str:
+
+def map_interval_for_exchange(exchange: Exchange,
+                              interval: CandleTimeInterval) -> str:
     return EXCHANGES_INTERVALS_MAP[exchange][interval]
+
 
 def map_arg_to_custom(interval: str) -> CandleTimeInterval:
     return {
-        "1m":  CandleTimeInterval.I_1M,
-        "3m":  CandleTimeInterval.I_3M,
-        "5m":  CandleTimeInterval.I_5M,
+        "1m": CandleTimeInterval.I_1M,
+        "3m": CandleTimeInterval.I_3M,
+        "5m": CandleTimeInterval.I_5M,
         "15m": CandleTimeInterval.I_15M,
         "30m": CandleTimeInterval.I_30M,
-        "1h":  CandleTimeInterval.I_1H,
-        "2h":  CandleTimeInterval.I_2H,
-        "4h":  CandleTimeInterval.I_4H,
-        "6h":  CandleTimeInterval.I_6H,
-        "8h":  CandleTimeInterval.I_8H,
+        "1h": CandleTimeInterval.I_1H,
+        "2h": CandleTimeInterval.I_2H,
+        "4h": CandleTimeInterval.I_4H,
+        "6h": CandleTimeInterval.I_6H,
+        "8h": CandleTimeInterval.I_8H,
         "12h": CandleTimeInterval.I_12H,
-        "1d":  CandleTimeInterval.I_1D,
+        "1d": CandleTimeInterval.I_1D,
     }.get(interval, None)
 
 
 def mode_mapper(mode: str) -> TradingMode:
     return {
-        "backtest":  TradingMode.BACKTEST,
+        "backtest": TradingMode.BACKTEST,
         "live-test": TradingMode.LIVE_TEST,
-        "live":      TradingMode.LIVE,
+        "live": TradingMode.LIVE,
     }.get(mode)
-
 
 
 def get_exchange_api(exchange: str):
 
     if exchange in ["poloniex"]:
-         return Poloniex(userconfig.POLONIEX_API_KEY, userconfig.POLONIEX_SECRET)
+        return Poloniex(userconfig.POLONIEX_API_KEY,
+                        userconfig.POLONIEX_SECRET)
 
     elif exchange in ["binance"]:
         return Binance(userconfig.BINANCE_API_KEY, userconfig.BINANCE_SECRET)
@@ -79,13 +78,10 @@ def get_exchange_api(exchange: str):
     return None
 
 
-IGNORED_strategy = [
-    "__pycache__",
-    "__init__"
-]
+IGNORED_strategy = ["__pycache__", "__init__"]
+
 
 class StrategiesManager(object):
-
     def __init__(self, directory):
         self.directory = directory
 
@@ -129,6 +125,7 @@ def frame_trend(df, n, indicator, callback):
         comparations.append(callback(previous, current))
 
     return comparations.count(True) > comparations.count(False)
+
 
 def almost_equal(a, b, e):
     return abs(a - b) < e
