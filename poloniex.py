@@ -6,6 +6,7 @@ import urllib
 import requests
 from loguru import logger
 
+import util
 from candle import Candle
 
 POLONIEX_PUBLIC_API = "https://poloniex.com/public"
@@ -14,6 +15,10 @@ POLONIEX_PRIVATE_API = "https://poloniex.com/tradingApi"
 
 def createTimeStamp(datestr, fmt="%Y-%m-%d %H:%M:%S"):
     return time.mktime(time.strptime(datestr, fmt))
+
+
+def interval_adapter(interval):
+    return util.MAP_CUSTOM_TYPE_TO_POLONIEX.get(interval)
 
 
 class ApiQueryError(Exception):
@@ -63,13 +68,13 @@ class Poloniex:
         return self.api_query(POLONIEX_PUBLIC_API, "return24hVolume")
 
     def returnChartData(self, pair, period, start, end):
-        params = {"currencyPair": pair.fmt_poloniex(), "period": period, "start": start, "end": end}
+        params = {"currencyPair": pair.fmt_poloniex(), "period": interval_adapter(period), "start": start, "end": end}
         poloniex_candles = self.api_query(POLONIEX_PUBLIC_API, "returnChartData", params)
 
         candles = []
         for item in poloniex_candles:
             (t, h, l, o, c) = (item["date"], item["high"], item["low"], item["open"], item["close"])
-            candles.append(Candle(timestamp=t, opn=float(o), close=float(c), high=float(h), low=float(l)))
+            candles.append(Candle(period, timestamp=t, opn=float(o), close=float(c), high=float(h), low=float(l)))
 
         return candles
 
