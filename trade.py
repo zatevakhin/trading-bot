@@ -2,7 +2,8 @@ from termcolor import colored
 
 from candle import Candle
 from customtypes import TradeStatus, TradingMode
-from poloniex import ApiQueryError, Poloniex
+from exchange_api.customtypes import ApiQueryError
+from exchange_api.exchange_api_adapter_base import ExchangeApiAdapterBase
 
 
 class Trade(object):
@@ -10,7 +11,7 @@ class Trade(object):
         self.pair = pair
         self.budget = budget
         self.mode: TradingMode = mode
-        self.exchange: Poloniex = exchange
+        self.exchange: ExchangeApiAdapterBase = exchange
         self.status = TradeStatus.CREATED
         self.entry_price = 0
         self.exit_price = 0

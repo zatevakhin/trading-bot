@@ -7,9 +7,9 @@ import time
 import numpy as np
 
 import userconfig
-from binance import Binance
 from customtypes import CandleTimeInterval, Exchange, IStrategy, TradingMode
-from poloniex import Poloniex
+from exchange_api.binance_adapter import BinanceAdapter
+from exchange_api.poloniex_adapter import PoloniexAdapter
 
 MIN_TREND_LINE_LENGTH = 3
 
@@ -89,12 +89,10 @@ def mode_mapper(mode: str) -> TradingMode:
 
 
 def get_exchange_api(exchange: str):
-
     if exchange in ["poloniex"]:
-        return Poloniex(userconfig.POLONIEX_API_KEY, userconfig.POLONIEX_SECRET)
-
+        return PoloniexAdapter(userconfig.POLONIEX_API_KEY, userconfig.POLONIEX_SECRET)
     elif exchange in ["binance"]:
-        return Binance(userconfig.BINANCE_API_KEY, userconfig.BINANCE_SECRET)
+        return BinanceAdapter(userconfig.BINANCE_API_KEY, userconfig.BINANCE_SECRET)
 
     return None
 
@@ -243,3 +241,6 @@ def trend_line_detection(df, n, indicator, min_n=3) -> int:
     (prev_iteration, curr_iteration) = list(df.iloc[-2:][indicator])
 
     return [min_n, n + 1][prev_iteration_trend > prev_iteration and curr_iteration_trend > curr_iteration]
+
+def createTimeStamp(datestr, fmt="%Y-%m-%d %H:%M:%S"):
+    return time.mktime(time.strptime(datestr, fmt))

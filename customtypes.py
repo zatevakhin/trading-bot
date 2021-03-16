@@ -8,12 +8,6 @@ class CurrencyPair:
         self.buy = buy
         self.sell = sell
 
-    def fmt_binance(self):
-        return f"{self.buy}{self.sell}"
-
-    def fmt_poloniex(self):
-        return f"{self.sell}_{self.buy}"
-
     def __repr__(self):
         return f"{self.buy}<->{self.sell}"
 
