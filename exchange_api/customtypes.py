@@ -17,5 +17,5 @@ class ApiQueryError(Exception):
 
 class TimeInForceStatus(Enum):
     GOOD_TIL_CANCELED = auto()
-    IMMEDIAGE_OR_CANCEL = auto()
+    IMMEDIATE_OR_CANCEL = auto()
     FILL_OR_KILL = auto()

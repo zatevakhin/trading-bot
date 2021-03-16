@@ -5,7 +5,6 @@ import urllib
 
 import requests
 from candle import Candle
-from loguru import logger
 
 from exchange_api.customtypes import ApiQueryError
 
@@ -39,7 +38,7 @@ class Poloniex:
             assert (True, "Wat?")
 
         if resp.status_code != 200:
-            raise BinanceException(status_code=resp.status_code, data=resp.json())
+            raise ApiQueryError(status_code=resp.status_code, data=resp.json())
 
         return resp.json()
 
@@ -49,7 +48,7 @@ class Poloniex:
         data = self._api_query(POLONIEX_PUBLIC_API, "returnTicker")
         return data.get(currencyPair, {}).get("last")
 
-    def return24hVolume(self) -> list[str]:
+    def return24hVolume(self) -> dict:
         # https://docs.poloniex.com/#return24hvolume
         return self._api_query(POLONIEX_PUBLIC_API, "return24hVolume")
 
@@ -65,32 +64,32 @@ class Poloniex:
 
         return candles
 
-    def returnOrderBook(self, currencyPair: str) -> list[str]:
+    def returnOrderBook(self, currencyPair: str) -> dict:
         # https://docs.poloniex.com/#returnorderbook
         params = {"currencyPair": currencyPair}
         return self._api_query(POLONIEX_PUBLIC_API, "returnOrderBook", params)
 
-    def returnMarketTradeHistory(self, currencyPair: str) -> list[str]:
+    def returnMarketTradeHistory(self, currencyPair: str) -> dict:
         # https://docs.poloniex.com/#returntradehistory-public
         params = {"currencyPair": currencyPair}
         return self._api_query(POLONIEX_PUBLIC_API, "returnTradeHistory", params)
 
-    def returnBalances(self) -> list[str]:
+    def returnBalances(self) -> dict:
         # Returns all of your balances available for trade after having deducted all open orders.
         # { '1CR': '0.00000000', ABY: '0.00000000', ...}
 
         # https://docs.poloniex.com/#returnbalances
         return self._api_query(POLONIEX_PRIVATE_API, "returnBalances")
 
-    def returnOpenOrders(self, currencyPair: str) -> list[str]:
+    def returnOpenOrders(self, currencyPair: str) -> dict:
         # Returns your open orders for a given market, specified by the "currencyPair" POST parameter, e.g. "BTC_ETH".
         #  Set "currencyPair" to "all" to return open orders for all markets.
 
         # https://docs.poloniex.com/#returnopenorders
-        params = {"currencyPair": pair}
+        params = {"currencyPair": currencyPair}
         return self._api_query(POLONIEX_PRIVATE_API, "returnOpenOrders", params)
 
-    def returnTradeHistory(self, currencyPair: str) -> list[str]:
+    def returnTradeHistory(self, currencyPair: str) -> dict:
         # Returns your trade history for a given market, specified by the "currencyPair" POST parameter.
         # You may specify "all" as the currencyPair to receive your trade history for all markets.
 
@@ -98,7 +97,7 @@ class Poloniex:
         params = {"currencyPair": currencyPair}
         return self._api_query(POLONIEX_PRIVATE_API, "returnTradeHistory", params)
 
-    def buy(self, currencyPair: str, rate: int, amount: int, timeInForce: dict[str, bool]) -> list[str]:
+    def buy(self, currencyPair: str, rate: int, amount: int, timeInForce: dict[str, bool]) -> dict:
         # Places a limit buy order in a given market. Required POST parameters are "currencyPair", "rate", and "amount".
         # If successful, the method will return the order number.
 
@@ -109,7 +108,7 @@ class Poloniex:
 
         return self._api_query(POLONIEX_PRIVATE_API, "buy", params)
 
-    def sell(self, currencyPair: str, rate: int, amount: int) -> list[str]:
+    def sell(self, currencyPair: str, rate: int, amount: int) -> dict:
         # Places a sell order in a given market. Required POST parameters are "currencyPair", "rate", and "amount".
         # If successful, the method will return the order number.
 
@@ -117,7 +116,7 @@ class Poloniex:
         params = {"currencyPair": currencyPair, "rate": rate, "amount": amount}
         return self._api_query(POLONIEX_PRIVATE_API, "sell", params)
 
-    def cancelOrder(self, currencyPair: str, orderNumber: int) -> list[str]:
+    def cancelOrder(self, currencyPair: str, orderNumber: int) -> dict:
         # Cancels an order you have placed in a given market. Requires exactly one of "orderNumber" or "clientOrderId" POST parameters.
         # If successful, the method will return a success of 1.
 

@@ -14,17 +14,17 @@ class ExchangeApiAdapterBase(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def returnChartData(self, pair: 'CurrencyPair', interval: int, start: int, end: int) -> list[str]:
+    def returnChartData(self, pair: 'CurrencyPair', interval: 'CandleTimeInterval', start: int, end: int) -> dict:
         raise NotImplementedError
 
     @abstractmethod
-    def buy(self, pair: 'CurrencyPair', price: int, amount: int, timeInForce: TimeInForceStatus) -> list[str]:
+    def buy(self, pair: 'CurrencyPair', price: int, amount: int, timeInForce: TimeInForceStatus) -> dict:
         raise NotImplementedError
 
     @abstractmethod
-    def sell(self, pair: 'CurrencyPair', price: int, amount: int) -> list[str]:
+    def sell(self, pair: 'CurrencyPair', price: int, amount: int) -> dict:
         raise NotImplementedError
 
     @abstractmethod
-    def cancel(self, pair: 'CurrencyPair', orderId: int) -> list[str]:
+    def cancel(self, pair: 'CurrencyPair', orderId: int) -> dict:
         raise NotImplementedError

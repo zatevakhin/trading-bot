@@ -5,7 +5,8 @@ from exchange_api.exchange_api_adapter_base import ExchangeApiAdapterBase
 from exchange_api.poloniex import Poloniex
 
 MAP_CUSTOM_TIME_IN_FORCE_POLONIEX = {
-    TimeInForceStatus.IMMEDIAGE_OR_CANCEL: "immediateOrCancel",
+    TimeInForceStatus.GOOD_TIL_CANCELED: "postOnly",
+    TimeInForceStatus.IMMEDIATE_OR_CANCEL: "immediateOrCancel",
     TimeInForceStatus.FILL_OR_KILL: "fillOrKill"
 }
 
@@ -42,15 +43,15 @@ class PoloniexAdapter(ExchangeApiAdapterBase):
         interval = _interval_adapter(interval)
         return self.exchange_api.returnChartData(pair, interval, start, end)
 
-    def buy(self, pair: 'CurrencyPair', price: int, amount: int, timeInForce: TimeInForceStatus) -> list[str]:
+    def buy(self, pair: 'CurrencyPair', price: int, amount: int, timeInForce: TimeInForceStatus) -> dict:
         pair = _pair_adapter(pair)
         timeInForce = _time_in_force_adapter(pair)
         return self.exchange_api.buy(pair, price, amount, timeInForce)
 
-    def sell(self, pair: 'CurrencyPair', price: int, amount: int) -> list[str]:
+    def sell(self, pair: 'CurrencyPair', price: int, amount: int) -> dict:
         pair = _pair_adapter(pair)
         return self.exchange_api.sell(pair, price, amount)
 
-    def cancel(self, pair: 'CurrencyPair', orderId: int) -> list[str]:
+    def cancel(self, pair: 'CurrencyPair', orderId: int) -> dict:
         pair = _pair_adapter(pair)
         return self.exchange_api.cancel(pair, orderId)

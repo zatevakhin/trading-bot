@@ -241,6 +241,3 @@ def trend_line_detection(df, n, indicator, min_n=3) -> int:
     (prev_iteration, curr_iteration) = list(df.iloc[-2:][indicator])
 
     return [min_n, n + 1][prev_iteration_trend > prev_iteration and curr_iteration_trend > curr_iteration]
-
-def createTimeStamp(datestr, fmt="%Y-%m-%d %H:%M:%S"):
-    return time.mktime(time.strptime(datestr, fmt))

@@ -2,7 +2,6 @@ import hashlib
 import hmac
 import random
 import time
-from enum import Enum, auto
 from urllib.parse import urlencode, urljoin
 
 import requests
@@ -39,11 +38,11 @@ class Binance:
         resp = operation(url, headers=headers, params=data)
 
         if resp.status_code != 200:
-            raise BinanceException(status_code=resp.status_code, data=resp.json())
+            raise ApiQueryError(status_code=resp.status_code, data=resp.json())
 
         return resp.json()
 
-    def returnTicker(self, symbol: str) -> list[str]:
+    def returnTicker(self, symbol: str) -> dict:
         params = {"symbol": symbol}
         return self._api_query(get_api_endpoint(), "/api/v3/ticker/price", params).get("price", None)
 
@@ -66,7 +65,7 @@ class Binance:
 
         return candles
 
-    def createBuyOrder(self, symbol: str, quantity: int, price: int, timeInForce: str) -> list[str]:
+    def createBuyOrder(self, symbol: str, quantity: int, price: int, timeInForce: str) -> dict:
         params = {
             'symbol': symbol,
             'side': 'BUY',
@@ -78,7 +77,7 @@ class Binance:
 
         return self._api_query_private(requests.post, '/api/v3/order', params)
 
-    def createSellOrder(self, symbol: str, quantity: int, price: int, timeInForce: str) -> list[str]:
+    def createSellOrder(self, symbol: str, quantity: int, price: int, timeInForce: str) -> dict:
         params = {
             'symbol': symbol,
             'side': 'SELL',
@@ -90,7 +89,7 @@ class Binance:
 
         return self._api_query_private(requests.post, '/api/v3/order', params)
 
-    def cancel(self, symbol: str, orderId: int) -> list[str]:
+    def cancel(self, symbol: str, orderId: int) -> dict:
         params = {'symbol': symbol, 'orderId': orderId}
 
         return self._api_query_private(requests.delete, '/api/v3/order', params)
