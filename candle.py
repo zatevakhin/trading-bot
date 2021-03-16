@@ -1,22 +1,17 @@
 import time
 
+import util
+
 
 class Candle(object):
-    def __init__(self,
-                 interval=300,
-                 timestamp=None,
-                 opn=None,
-                 close=None,
-                 high=None,
-                 low=None,
-                 average=None):
+    def __init__(self, interval, timestamp=None, opn=None, close=None, high=None, low=None, average=None):
         self.current = None
         self.open = opn
         self.close = close
         self.high = high
         self.low = low
         self.timestamp = int(timestamp or time.time())
-        self.interval = int(interval)
+        self.interval = util.interval_mapper_to_seconds(interval)
         self.average = float(average or 0)
 
         if not self.average:
@@ -24,9 +19,6 @@ class Candle(object):
 
             if None not in prices:
                 self.average = sum(prices) / 3
-
-    def close_time(self):
-        return self.timestamp + self.interval
 
     def tick(self, price):
         self.current = float(price)
@@ -44,7 +36,7 @@ class Candle(object):
             self.close = self.current
             self.average = (self.high + self.low + self.close) / float(3)
 
-    def isClosed(self):
+    def is_closed(self):
         return self.close is not None
 
     def __repr__(self) -> str:

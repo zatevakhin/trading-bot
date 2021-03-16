@@ -1,5 +1,6 @@
-import functools
+import ctypes
 import operator
+from enum import Enum, auto
 
 import numpy as np
 import pandas as pd
@@ -8,7 +9,13 @@ from chart import Chart
 from customtypes import CurrencyPair, IStrategy, TradingMode
 from termcolor import colored
 from trade import Trade, TradeStatus
-from util import frame_trend
+from util import (MIN_TREND_LINE_LENGTH, frame_trend, get_aprox_trend_line, is_downtrend, is_uptrend)
+
+
+class TrendState(Enum):
+    UNDEFINED = auto()
+    UPTREND = auto()
+    DOWNTREND = auto()
 
 
 class Strategy(IStrategy):
@@ -23,13 +30,20 @@ class Strategy(IStrategy):
 
         self.trades = []
         self.currentPrice = 0
+        self.current_candle = None
         self.max_num_trades = 1
+
+        self.n_downtrend = MIN_TREND_LINE_LENGTH
+        self.n_uptrend = MIN_TREND_LINE_LENGTH
+
+        self.PREVIOUS_TREND = TrendState.UNDEFINED
 
     def preload(self, candle_list):
         self.chart.reset(candle_list)
 
     def on_tick(self, candle):
         self.chart.add(candle)
+        self.current_candle = candle
         self.currentPrice = float(candle.average)
         df = self.get_indicators()
 
@@ -42,94 +56,103 @@ class Strategy(IStrategy):
         pair_fmt = colored("{}".format(self.chart.pair), 'yellow')
         open_trades_fmt = colored("{}".format(len(open_trades)), 'magenta')
 
-        print(
-            f"Pair: {pair_fmt} Price: {price_fmt} Open trades {open_trades_fmt}"
-        )
+        print(f"Pair: {pair_fmt} Price: {price_fmt} Open trades {open_trades_fmt}")
 
         # strategy tick
-        self.tick(candle, open_trades, df)
+        u, d = self.tick(candle, open_trades, df)
 
         self.update_open_trades()
         self.show_positions()
 
+        return u, d
+
     def tick(self, candle, open_trades, df):
+        curr_row = df.iloc[-1]
         prev_row = df.iloc[-2]
 
-        prev_ema_50 = prev_row["EMA50"]
-        prev_ema_200 = prev_row["EMA200"]
+        RSI = curr_row["RSI"]
 
-        curr_row = df.iloc[-1]
-        current_RSI = curr_row["RSI"]
+        DI_P = curr_row["DI+"]
+        DI_M = curr_row["DI-"]
+        ADX = curr_row["ADX"]
 
-        ema_50 = curr_row["EMA50"]
-        ema_200 = curr_row["EMA200"]
+        EMA50 = curr_row["EMA50"]
+        EMA200 = curr_row["EMA200"]
+
+        P_EMA50 = prev_row["EMA50"]
+        P_EMA200 = prev_row["EMA200"]
+
+        EMA_50_200_DEAD_CROSS = EMA200 > EMA50
+        EMA_50_200_GOLDEN_CROSS = EMA50 > EMA200
+
+        EMA200_FALLING = frame_trend(df, 5, "EMA200", operator.ge)
+        EMA50_FALLING = frame_trend(df, 3, "EMA50", operator.ge)
+        EMA50_RISING = frame_trend(df, 2, "EMA50", operator.le)
+
+        RSI_RISING = frame_trend(df, 2, "RSI", operator.ge)
+
+        price_lower_that_ema_200 = EMA200 > self.currentPrice
+        price_upper_that_ema_200 = EMA200 < self.currentPrice
+        price_lower_that_ema_50 = EMA50 > self.currentPrice
+        price_upper_that_ema_50 = EMA50 < self.currentPrice
+
+        prev_ema_50_200_diff = abs(P_EMA50 - P_EMA200)
+        curr_ema_50_200_diff = abs(EMA50 - EMA200)
 
         can_open_new_trade = len(open_trades) < self.max_num_trades
 
-        ema_50_200_dead_cross = ema_200 > ema_50
-        ema_50_200_golden_cross = ema_50 > ema_200
-
-        ema_50_falling = ema_50 < prev_ema_50
-        ema_50_rising = ema_50 > prev_ema_50
-
-        prev_ema_50_200_diff = abs(prev_ema_50 - prev_ema_200)
-        curr_ema_50_200_diff = abs(ema_50 - ema_200)
-
-        ema_50_falling_x = frame_trend(df, 3, "EMA50", operator.gt)
-
-        is_price_falling = frame_trend(df, 3, "Price.c", operator.gt)
-        is_price_rising = frame_trend(df, 2, "Price.c", operator.lt)
-
-        is_rsi_rising = frame_trend(df, 3, "RSI", operator.lt)
-
-        price_lower_that_ema_200 = ema_200 > self.currentPrice
-        price_lower_that_ema_50 = ema_50 > self.currentPrice
-        price_upper_that_ema_50 = ema_50 < self.currentPrice
-
-        rsi_overbought = current_RSI > 70
-        rsi_overbought_crit = current_RSI >= 80
-        rsi_oversold_light = current_RSI <= 40
-        rsi_oversold = current_RSI < 30
-
         trade = Trade(self.pair, self.budget, self.mode, self.exchange, 5.0)
 
+        indicator_y_uptrend = "High"
+        indicator_y_downtrend = "Low"
+
+        p_uptrend = get_aprox_trend_line(df, self.n_uptrend, indicator_y_downtrend)
+        p_downtrend = get_aprox_trend_line(df, self.n_downtrend, indicator_y_uptrend)
+
+        UP_TREND = is_uptrend(df, p_uptrend, indicator_y_uptrend)
+        # UP_TREND = UP_TREND and operator.le(p_uptrend[0], p_uptrend[-1])
+        # UP_TREND = UP_TREND and frame_trend(df, self.n_uptrend, indicator_y_uptrend, operator.le)
+
+        DOWN_TREND = is_downtrend(df, p_downtrend, indicator_y_downtrend)
+        # DOWN_TREND = DOWN_TREND and operator.ge(p_downtrend[0], p_downtrend[-1])
+        # DOWN_TREND = DOWN_TREND and frame_trend(df, self.n_downtrend, indicator_y_downtrend, operator.ge)
+
+        if UP_TREND == DOWN_TREND:
+            self.n_uptrend = MIN_TREND_LINE_LENGTH
+            self.n_downtrend = MIN_TREND_LINE_LENGTH
+            return p_uptrend, p_downtrend
+
+        # print(UP_TREND, DOWN_TREND)
+        current_n_uptrend = [MIN_TREND_LINE_LENGTH, self.n_uptrend + 1][UP_TREND]
+        current_n_downtrend = [MIN_TREND_LINE_LENGTH, self.n_downtrend + 1][DOWN_TREND]
+
+        TREND_STATE = TrendState.UNDEFINED
+
+        if UP_TREND and current_n_uptrend > self.n_uptrend:
+            TREND_STATE = TrendState.UPTREND
+
+        if DOWN_TREND and current_n_downtrend > self.n_downtrend:
+            TREND_STATE = TrendState.DOWNTREND
+
         if can_open_new_trade:
-            if price_lower_that_ema_50 or price_lower_that_ema_200:
-                if is_price_falling:
-                    if trade.open(candle):
-                        self.trades.append(trade)
-
-        if rsi_overbought_crit:
+            if TREND_STATE == TrendState.UPTREND:
+                if self.PREVIOUS_TREND == TrendState.DOWNTREND:
+                    if current_n_downtrend == MIN_TREND_LINE_LENGTH:
+                        if RSI <= 60:
+                            if trade.open(candle):
+                                self.trades.append(trade)
+        #--------------------------
+        if TREND_STATE == TrendState.DOWNTREND:
             for trade in open_trades:
-                trade.close(candle)
-
-        elif ema_50_200_golden_cross:
-            if ema_50_falling or is_rsi_rising:  # with rsi is better
-                for trade in open_trades:
+                if abs(trade.profit(candle)) >= 0.4:
                     trade.close(candle)
+        #--------------------------
 
-        # ---------------------------------------------------------------------
+        self.n_uptrend = current_n_uptrend
+        self.n_downtrend = current_n_downtrend
+        self.PREVIOUS_TREND = TREND_STATE
 
-        # if can_open_new_trade:
-        #     if ema_50_200_dead_cross:
-        #         # if prev_ema_50_200_diff > curr_ema_50_200_diff:
-        #         # if ema_50_rising and price_lower_that_ema_50:
-        #         if price_lower_that_ema_50 and not is_rsi_rising:
-        #                 self.trades.append(Trade(self.exchange, self.currentPrice, stopLossPercent=5.0, candle=candle))
-
-        #     # elif rsi_oversold and price_lower_that_ema_50:
-        #     #     self.trades.append(Trade(self.exchange, self.currentPrice, stopLossPercent=5.0, candle=candle))
-
-        # if ema_50_200_golden_cross:
-
-        #     # if curr_ema_50_200_diff > prev_ema_50_200_diff: # with rsi is better
-        #     if ema_50_falling or rsi_overbought: # with rsi is better
-        #         for trade in open_trades:
-        #                 trade.close(self.currentPrice, candle=candle)
-
-        # elif rsi_overbought_crit:
-        #     for trade in open_trades:
-        #         trade.close(self.currentPrice, candle=candle)
+        return p_uptrend, p_downtrend
 
     def get_indicators(self):
         candles = self.chart.get_candles()
@@ -146,40 +169,27 @@ class Strategy(IStrategy):
         prices_low = list(map(lambda x: x.low, candles))
         np_prices_low = np.array(prices_low)
 
-        timestamps = list(
-            map(lambda x: pd.to_datetime(x.timestamp, unit='s'), candles))
+        timestamps = list(map(lambda x: pd.to_datetime(x.timestamp, unit='s'), candles))
 
         rsi = talib.RSI(np_prices_close, timeperiod=14)
-        adx = talib.ADX(np_prices_high,
-                        np_prices_low,
-                        np_prices_close,
-                        timeperiod=14)
-        di_minus = talib.MINUS_DI(np_prices_high,
-                                  np_prices_low,
-                                  np_prices_close,
-                                  timeperiod=14)
-        di_plus = talib.PLUS_DI(np_prices_high,
-                                np_prices_low,
-                                np_prices_close,
-                                timeperiod=14)
+        adx = talib.ADX(np_prices_high, np_prices_low, np_prices_close, timeperiod=14)
+        di_minus = talib.MINUS_DI(np_prices_high, np_prices_low, np_prices_close, timeperiod=14)
+        di_plus = talib.PLUS_DI(np_prices_high, np_prices_low, np_prices_close, timeperiod=14)
 
+        ema_3 = talib.EMA(np_prices_close, timeperiod=3)
         ema_50 = talib.EMA(np_prices_close, timeperiod=50)
         ema_200 = talib.EMA(np_prices_close, timeperiod=200)
 
-        zipped = zip(timestamps, np_prices_close, np_prices_high,
-                     np_prices_low, rsi, ema_50, ema_200, adx, di_minus,
-                     di_plus)
-        columns = [
-            "Timestamp", "Price.c", "Price.h", "Price.l", "RSI", "EMA50",
-            "EMA200", "ADX", "DI-", "DI+"
-        ]
+        zipped = zip(timestamps, np_prices_open, np_prices_close, np_prices_high, np_prices_low, rsi, ema_3, ema_50,
+                     ema_200, adx, di_minus, di_plus)
+        columns = ["Timestamp", "Open", "Close", "High", "Low", "RSI", "EMA3", "EMA50", "EMA200", "ADX", "DI-", "DI+"]
 
         return pd.DataFrame(zipped, columns=columns)
 
     def update_open_trades(self):
         for trade in self.trades:
             if trade.status == TradeStatus.OPEN:
-                trade.tick(self.currentPrice)
+                trade.tick(self.current_candle)
 
     def show_positions(self):
         tradesProfitPercent = []

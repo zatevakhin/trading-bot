@@ -1,4 +1,3 @@
-
 POLONIEX_API_KEY = ""
 POLONIEX_SECRET = ""
 

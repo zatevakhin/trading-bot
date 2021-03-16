@@ -21,8 +21,7 @@ class Trade(object):
 
         self.bought_amount = None
 
-        assert (stop_loss_percent <= 100.0
-                or stop_loss_percent >= 0.0), "Incorrect stop loss limit!"
+        assert (stop_loss_percent <= 100.0 or stop_loss_percent >= 0.0), "Incorrect stop loss limit!"
 
     def open(self, candle: Candle):
         self.open_candle = candle
@@ -37,8 +36,7 @@ class Trade(object):
             amount = (self.budget / self.entry_price)
 
             try:
-                trade = self.exchange.buy(self.pair, self.entry_price, amount,
-                                          True)
+                trade = self.exchange.buy(self.pair, self.entry_price, amount)
             except ApiQueryError:
                 return
 
@@ -46,8 +44,7 @@ class Trade(object):
 
             resulting_trades = trade.get('resultingTrades', [])
 
-            bought_list = map(lambda t: float(t['takerAdjustment']),
-                              resulting_trades)
+            bought_list = map(lambda t: float(t['takerAdjustment']), resulting_trades)
             self.bought_amount = sum(bought_list)
 
         print("Trade", colored("opened", 'green'))
@@ -62,27 +59,24 @@ class Trade(object):
         print("Trade", colored("closed", 'red'))
 
         if self.mode in [TradingMode.LIVE]:
-            print(
-                "exchange.sell",
-                self.exchange.sell(self.pair, self.exit_price,
-                                   self.bought_amount))
+            print("exchange.sell", self.exchange.sell(self.pair, self.exit_price, self.bought_amount))
 
-    def tick(self, currentPrice):
+    def tick(self, candle):
         if self.stop_loss:
-            if (self.entry_price - self.stop_loss) >= currentPrice:
+            if (self.entry_price - self.stop_loss) >= float(candle.average):
                 print(colored("STOP LOSS", 'red', attrs=["bold"]))
-                self.close(currentPrice)
+                self.close(candle)
+
+    def profit(self, candle):
+        diff = float(candle.average) - self.entry_price
+        return (diff * 100) / float(candle.average)
 
     def showTrade(self):
-        entry_price_fmt = colored("{:0.8f}".format(self.entry_price),
-                                  "grey",
-                                  attrs=["bold"])
-        exit_price_fmt = colored("{:0.8f}".format(self.exit_price),
-                                 "white",
-                                 attrs=["bold"])
+        entry_price_fmt = colored("{:0.8f}".format(self.entry_price), "grey", attrs=["bold"])
+        exit_price_fmt = colored("{:0.8f}".format(self.exit_price), "white", attrs=["bold"])
 
-        tradeStatus = "Entry Price: {}, Status: {} Exit Price: {}".format(
-            entry_price_fmt, self.status.name, exit_price_fmt)
+        tradeStatus = "Entry Price: {}, Status: {} Exit Price: {}".format(entry_price_fmt, self.status.name,
+                                                                          exit_price_fmt)
 
         pp = 0
         if self.status == TradeStatus.CLOSED:

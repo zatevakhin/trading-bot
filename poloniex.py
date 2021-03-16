@@ -33,15 +33,10 @@ class Poloniex:
             ret = requests.get(f"{api}", params=params)
 
         elif api == POLONIEX_PRIVATE_API:
-            post_data = {
-                "command": command,
-                "nonce": int(time.time() * 1000),
-                **data
-            }
+            post_data = {"command": command, "nonce": int(time.time() * 1000), **data}
             post_data_quote = urllib.parse.urlencode(post_data)
 
-            sign = hmac.new(str.encode(self.secret, "utf-8"),
-                            str.encode(post_data_quote, "utf-8"),
+            sign = hmac.new(str.encode(self.secret, "utf-8"), str.encode(post_data_quote, "utf-8"),
                             hashlib.sha512).hexdigest()
 
             headers = {"Sign": sign, "Key": self.api_key}
@@ -68,25 +63,13 @@ class Poloniex:
         return self.api_query(POLONIEX_PUBLIC_API, "return24hVolume")
 
     def returnChartData(self, pair, period, start, end):
-        params = {
-            "currencyPair": pair.fmt_poloniex(),
-            "period": period,
-            "start": start,
-            "end": end
-        }
-        poloniex_candles = self.api_query(POLONIEX_PUBLIC_API,
-                                          "returnChartData", params)
+        params = {"currencyPair": pair.fmt_poloniex(), "period": period, "start": start, "end": end}
+        poloniex_candles = self.api_query(POLONIEX_PUBLIC_API, "returnChartData", params)
 
         candles = []
         for item in poloniex_candles:
-            (t, h, l, o, c) = (item["date"], item["high"], item["low"],
-                               item["open"], item["close"])
-            candles.append(
-                Candle(timestamp=t,
-                       opn=float(o),
-                       close=float(c),
-                       high=float(h),
-                       low=float(l)))
+            (t, h, l, o, c) = (item["date"], item["high"], item["low"], item["open"], item["close"])
+            candles.append(Candle(timestamp=t, opn=float(o), close=float(c), high=float(h), low=float(l)))
 
         return candles
 
@@ -95,11 +78,10 @@ class Poloniex:
         params = {"currencyPair": pair.fmt_poloniex()}
         return self.api_query(POLONIEX_PUBLIC_API, "returnOrderBook", params)
 
-    def returnMarketTradeHistory(self, currencyPair):
+    def returnMarketTradeHistory(self, pair):
         # https://docs.poloniex.com/#returntradehistory-public
-        params = {"currencyPair": currencyPair}
-        return self.api_query(POLONIEX_PUBLIC_API, "returnTradeHistory",
-                              params)
+        params = {"currencyPair": pair.fmt_poloniex()}
+        return self.api_query(POLONIEX_PUBLIC_API, "returnTradeHistory", params)
 
     def returnBalances(self):
         # Returns all of your balances available for trade after having deducted all open orders.
@@ -122,19 +104,14 @@ class Poloniex:
 
         # https://docs.poloniex.com/#returntradehistory-private
         params = {"currencyPair": pair.fmt_poloniex()}
-        return self.api_query(POLONIEX_PRIVATE_API, "returnTradeHistory",
-                              params)
+        return self.api_query(POLONIEX_PRIVATE_API, "returnTradeHistory", params)
 
-    def buy(self, pair, rate, amount, fill_or_kill=False):
+    def buy(self, pair, rate, amount, fill_or_kill=True):
         # Places a limit buy order in a given market. Required POST parameters are "currencyPair", "rate", and "amount".
         # If successful, the method will return the order number.
 
         # https://docs.poloniex.com/#buy
-        params = {
-            "currencyPair": pair.fmt_poloniex(),
-            "rate": rate,
-            "amount": amount
-        }
+        params = {"currencyPair": pair.fmt_poloniex(), "rate": rate, "amount": amount}
         if fill_or_kill:
             params.update({"fillOrKill": int(fill_or_kill)})
 
@@ -145,11 +122,7 @@ class Poloniex:
         # If successful, the method will return the order number.
 
         # https://docs.poloniex.com/#sell
-        params = {
-            "currencyPair": pair.fmt_poloniex(),
-            "rate": rate,
-            "amount": amount
-        }
+        params = {"currencyPair": pair.fmt_poloniex(), "rate": rate, "amount": amount}
         return self.api_query(POLONIEX_PRIVATE_API, "sell", params)
 
     def cancel(self, pair, orderNumber):
@@ -157,8 +130,5 @@ class Poloniex:
         # If successful, the method will return a success of 1.
 
         # https://docs.poloniex.com/#cancelorder
-        params = {
-            "currencyPair": pair.fmt_poloniex(),
-            "orderNumber": orderNumber
-        }
+        params = {"currencyPair": pair.fmt_poloniex(), "orderNumber": orderNumber}
         return self.api_query(POLONIEX_PRIVATE_API, "cancelOrder", params)

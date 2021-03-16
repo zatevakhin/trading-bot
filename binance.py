@@ -7,6 +7,7 @@ from urllib.parse import urlencode, urljoin
 
 import requests
 
+import util
 from candle import Candle
 
 
@@ -26,15 +27,14 @@ class BinanceException(Exception):
 
 
 BINANCE_API_ENDPOINTS = [
-    "https://api.binance.com", "https://api1.binance.com",
-    "https://api2.binance.com", "https://api3.binance.com"
+    "https://api.binance.com", "https://api1.binance.com", "https://api2.binance.com", "https://api3.binance.com"
 ]
 
 
 class TimeInForceStatus(Enum):
     GTC = 'GTC'  # Good Til Canceled An order will be on the book unless the order is canceled.
     IOC = 'IOC'  # Immediate Or Cancel An order will try to fill the order as much as it can before the order expires.
-    FOK = 'FOC'  # Fill or Kill An order will expire if the full order cannot be filled upon execution.
+    FOK = 'FOK'  # Fill or Kill An order will expire if the full order cannot be filled upon execution.
 
 
 class CRUDType(Enum):
@@ -43,12 +43,8 @@ class CRUDType(Enum):
     DELETE = auto()
 
 
-def createTimeStamp():
-    return time.mktime(time.strptime(datestr, fmt))
-
-
 def interval_adapter(interval):
-    return {'300': '5m'}[str(interval)]
+    return util.MAP_CUSTOM_TYPE_TO_BINANCE.get(interval)
 
 
 def get_api_endpoint():
@@ -60,21 +56,24 @@ class Binance:
         self.api_key = str(api_key)
         self.secret = str(secret)
 
+        self.exchange_info = self.api_query(get_api_endpoint(), "/api/v3/exchangeInfo")
+
+    def get_symbol_info(self, pair):
+        for symbol in self.exchange_info["symbols"]:
+            if symbol["symbol"] == pair.fmt_binance():
+                return symbol
+
     def api_query(self, endpoint: str, api: str, data: dict = {}):
         ret = requests.get(f"{endpoint}{api}", params=data)
         return ret.json()
 
-    def api_query_private(self,
-                          crudType: CRUDType,
-                          command: str,
-                          data: dict = {}):
+    def api_query_private(self, crudType: CRUDType, command: str, data: dict = {}):
         headers = {'X-MBX-APIKEY': self.api_key}
 
         data['timestamp'] = int(time.time() * 1000)
         data['recvWindow'] = 5000
         query_string = urlencode(data)
-        data['signature'] = hmac.new(self.secret.encode('utf-8'),
-                                     query_string.encode('utf-8'),
+        data['signature'] = hmac.new(self.secret.encode('utf-8'), query_string.encode('utf-8'),
                                      hashlib.sha256).hexdigest()
         url = urljoin(get_api_endpoint(), command)
 
@@ -89,22 +88,15 @@ class Binance:
             data = resp.json()
             # print(json.dumps(data, indent=2))
         else:
-            raise BinanceException(status_code=resp.status_code,
-                                   data=resp.json())
+            raise BinanceException(status_code=resp.status_code, data=resp.json())
 
         return resp.json()
 
     def returnTicker(self, pair):
         params = {"symbol": pair.fmt_binance()}
-        return self.api_query(get_api_endpoint(), "/api/v3/ticker/price",
-                              params).get("price", None)
+        return self.api_query(get_api_endpoint(), "/api/v3/ticker/price", params).get("price", None)
 
-    def returnChartData(self,
-                        pair: str,
-                        interval,
-                        start=None,
-                        end=None,
-                        limit=1000):
+    def returnChartData(self, pair: str, interval, start=None, end=None, limit=1000):
         interval = interval_adapter(interval)
 
         params = {
@@ -115,14 +107,14 @@ class Binance:
             "limit": limit
         }
         params = {k: v for k, v in params.items() if v is not None}
-        binance_candles = self.api_query(get_api_endpoint(), "/api/v3/klines",
-                                         params)
+        binance_candles = self.api_query(get_api_endpoint(), "/api/v3/klines", params)
 
         candles = []
         for binance_candle in binance_candles:
             (o_time, o, h, l, c, v, c_time, *x) = binance_candle
             candles.append(
-                Candle(timestamp=c_time / 1000,
+                Candle(interval=interval,
+                       timestamp=c_time / 1000,
                        opn=float(o),
                        close=float(c),
                        high=float(h),
@@ -130,34 +122,26 @@ class Binance:
 
         return candles
 
-    def buy(self,
-            pair,
-            quantity,
-            price,
-            timeInForceStatus=TimeInForceStatus.GTC):
+    def buy(self, pair, price, quantity, timeInForceStatus=TimeInForceStatus.FOK):
         params = {
             'symbol': pair.fmt_binance(),
             'side': 'BUY',
             'type': 'LIMIT',
             'timeInForce': timeInForceStatus.value,
             'quantity': quantity,
-            'price': price
+            'price': price,
         }
-
+        print(params)
         return self.api_query_private(CRUDType.POST, '/api/v3/order', params)
 
-    def sell(self,
-             pair,
-             quantity,
-             price,
-             timeInForceStatus=TimeInForceStatus.GTC):
+    def sell(self, pair, price, quantity, timeInForceStatus=TimeInForceStatus.GTC):
         params = {
             'symbol': pair.fmt_binance(),
             'side': 'SELL',
             'type': 'LIMIT',
             'timeInForce': timeInForceStatus.value,
             'quantity': quantity,
-            'price': price
+            'price': price,
         }
 
         return self.api_query_private(CRUDType.POST, '/api/v3/order', params)
@@ -169,12 +153,11 @@ class Binance:
         return self.api_query_private(CRUDType.DELETE, '/api/v3/order', params)
 
 
-# from customtypes import IStrategy, TradingMode, CurrencyPair
-
-# API_KEY = 'lol'
-# SECRET_KEY = 'kek'
+# import userconfig
+# from customtypes import CurrencyPair
 
 # if __name__ == "__main__":
-#     api = Binance(API_KEY, SECRET_KEY)
-#     pair = CurrencyPair('DOGE', 'USDT')
-#     print(api.buy(pair, 200, 0.05))
+#     api = Binance(userconfig.BINANCE_API_KEY, userconfig.BINANCE_SECRET)
+#     pair = CurrencyPair('RVN', 'USDT')
+
+# print(api.buy(pair, 0.239693, 62.579963))
