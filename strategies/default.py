@@ -5,10 +5,12 @@ import numpy as np
 import pandas as pd
 import talib
 from chart import Chart
-from customtypes import CurrencyPair, IStrategy, TradingMode
+from customtypes import CurrencyPair, TradingMode
 from termcolor import colored
 from trade import Trade, TradeStatus
-from util import (MIN_TREND_LINE_LENGTH, frame_trend, get_aprox_trend_line, is_downtrend, is_uptrend)
+from utils.trand_indicators import *
+
+from strategies.strategybase import StrategyBase
 
 
 class TrendState(Enum):
@@ -17,7 +19,7 @@ class TrendState(Enum):
     DOWNTREND = auto()
 
 
-class Strategy(IStrategy):
+class Strategy(StrategyBase):
     __strategy__ = 'default'
 
     def __init__(self, mode, budget, chart, exchange):
@@ -84,11 +86,11 @@ class Strategy(IStrategy):
         EMA_50_200_DEAD_CROSS = EMA200 > EMA50
         EMA_50_200_GOLDEN_CROSS = EMA50 > EMA200
 
-        EMA200_FALLING = frame_trend(df, 5, "EMA200", operator.ge)
-        EMA50_FALLING = frame_trend(df, 3, "EMA50", operator.ge)
-        EMA50_RISING = frame_trend(df, 2, "EMA50", operator.le)
+        EMA200_FALLING = check_frame_trend(df, 5, "EMA200", operator.ge)
+        EMA50_FALLING = check_frame_trend(df, 3, "EMA50", operator.ge)
+        EMA50_RISING = check_frame_trend(df, 2, "EMA50", operator.le)
 
-        RSI_RISING = frame_trend(df, 2, "RSI", operator.ge)
+        RSI_RISING = check_frame_trend(df, 2, "RSI", operator.ge)
 
         price_lower_that_ema_200 = EMA200 > self.currentPrice
         price_upper_that_ema_200 = EMA200 < self.currentPrice
@@ -102,30 +104,23 @@ class Strategy(IStrategy):
 
         trade = Trade(self.pair, self.budget, self.mode, self.exchange, 5.0)
 
-        indicator_y_uptrend = "High"
         indicator_y_downtrend = "Low"
+        indicator_y_uptrend = "High"
 
-        p_uptrend = get_aprox_trend_line(df, self.n_uptrend, indicator_y_downtrend)
-        p_downtrend = get_aprox_trend_line(df, self.n_downtrend, indicator_y_uptrend)
+        p_uptrend = get_trend_aproximation(df, self.n_uptrend, indicator_y_downtrend)
+        p_downtrend = get_trend_aproximation(df, self.n_downtrend, indicator_y_uptrend)
 
-        UP_TREND = is_uptrend(df, p_uptrend, indicator_y_uptrend)
-        # UP_TREND = UP_TREND and operator.le(p_uptrend[0], p_uptrend[-1])
-        # UP_TREND = UP_TREND and frame_trend(df, self.n_uptrend, indicator_y_uptrend, operator.le)
+        UP_TREND = check_uptrend(df, p_uptrend, True)
+        DOWN_TREND = check_downtrend(df, p_downtrend, True)
 
-        DOWN_TREND = is_downtrend(df, p_downtrend, indicator_y_downtrend)
-        # DOWN_TREND = DOWN_TREND and operator.ge(p_downtrend[0], p_downtrend[-1])
-        # DOWN_TREND = DOWN_TREND and frame_trend(df, self.n_downtrend, indicator_y_downtrend, operator.ge)
+        TREND_STATE = TrendState.UNDEFINED
 
         if UP_TREND == DOWN_TREND:
             self.n_uptrend = MIN_TREND_LINE_LENGTH
             self.n_downtrend = MIN_TREND_LINE_LENGTH
-            return p_uptrend, p_downtrend
 
-        # print(UP_TREND, DOWN_TREND)
         current_n_uptrend = [MIN_TREND_LINE_LENGTH, self.n_uptrend + 1][UP_TREND]
         current_n_downtrend = [MIN_TREND_LINE_LENGTH, self.n_downtrend + 1][DOWN_TREND]
-
-        TREND_STATE = TrendState.UNDEFINED
 
         if UP_TREND and current_n_uptrend > self.n_uptrend:
             TREND_STATE = TrendState.UPTREND
@@ -145,7 +140,11 @@ class Strategy(IStrategy):
             for trade in open_trades:
                 if abs(trade.profit(candle)) >= 0.4:
                     trade.close(candle)
+
         #--------------------------
+        if TREND_STATE == TrendState.UNDEFINED:
+            for trade in open_trades:
+                trade.set_prop_limit(candle, 0.5)
 
         self.n_uptrend = current_n_uptrend
         self.n_downtrend = current_n_downtrend

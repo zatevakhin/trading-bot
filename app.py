@@ -11,6 +11,7 @@ from pyqtgraph import QtCore, QtGui
 import util
 from chart import Chart
 from customtypes import CurrencyPair, TradingMode
+from utils.strategy_manager import StrategyManager
 from workers.backtest_ticker import BacktestTicker
 from workers.live_ticker import LiveTicker
 
@@ -114,7 +115,7 @@ class MainWindow(pg.GraphicsView):
     def configure_trader(self, args):
         self.pair = CurrencyPair(*args.pair.split(","))
         self.exchange = util.get_exchange_api(args.exchange)
-        self.strategies_mgr = util.StrategiesManager("strategies/")
+        self.strategies_mgr = StrategyManager("strategies/")
 
         self.tick = int(args.tick)
         self.backtest_tick = float(args.tick_b)

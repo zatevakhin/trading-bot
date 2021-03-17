@@ -65,13 +65,3 @@ CANDLE_TIME_INTERVALS_BINANCE = (
     CandleTimeInterval.I_12H,
     CandleTimeInterval.I_1D,
 )
-
-
-class IStrategy(object):
-    __strategy__ = None
-
-    def preload(self, candles: list['Candle']):
-        raise NotImplementedError
-
-    def on_tick(self, candle: 'Candle'):
-        raise NotImplementedError
