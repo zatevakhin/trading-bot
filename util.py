@@ -78,17 +78,6 @@ def mode_mapper(mode: str) -> TradingMode:
     }.get(mode)
 
 
-def get_exchange_api(exchange: str):
-    if exchange in ["poloniex"]:
-        from exchange_api.poloniex_adapter import PoloniexAdapter
-        return PoloniexAdapter(userconfig.POLONIEX_API_KEY, userconfig.POLONIEX_SECRET)
-    elif exchange in ["binance"]:
-        from exchange_api.binance_adapter import BinanceAdapter
-        return BinanceAdapter(userconfig.BINANCE_API_KEY, userconfig.BINANCE_SECRET)
-
-    return None
-
-
 def almost_equal(a, b, e):
     return abs(a - b) < e
 

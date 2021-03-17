@@ -5,10 +5,10 @@ import time
 from urllib.parse import urlencode, urljoin
 
 import requests
-import util
 from candle import Candle
 
-from exchange_api.customtypes import ApiQueryError
+from exchange_api.customtypes import ApiFilterError, ApiQueryError
+from exchange_api.utils import binance_filters
 
 BINANCE_API_ENDPOINTS = [
     "https://api.binance.com", "https://api1.binance.com", "https://api2.binance.com", "https://api3.binance.com"
@@ -23,6 +23,7 @@ class Binance:
     def __init__(self, api_key: str, secret: str) -> None:
         self.api_key = str(api_key)
         self.secret = str(secret)
+        self.exchange_info = self.exchangeInfo()
 
     def _api_query(self, endpoint: str, api: str, data: dict = {}) -> dict:
         ret = requests.get(f"{endpoint}{api}", params=data)
@@ -69,6 +70,14 @@ class Binance:
         return candles
 
     def createBuyOrder(self, symbol: str, price: int, quantity: float, timeInForce: str) -> dict:
+        passed_price_filter, price = binance_filters.get_price_filter(symbol, self.exchange_info, price)
+        if not passed_price_filter:
+            raise ApiFilterError(symbol, price, "Price")
+
+        passed_quantity_filter, quantity = binance_filters.get_quantity_filter(symbol, self.exchange_info, quantity)
+        if not passed_quantity_filter:
+            raise ApiFilterError(symbol, quantity, "Quantity")
+
         params = {
             'symbol': symbol,
             'side': 'BUY',
@@ -81,6 +90,14 @@ class Binance:
         return self._api_query_private(requests.post, '/api/v3/order', params)
 
     def createSellOrder(self, symbol: str, price: int, quantity: float, timeInForce: str) -> dict:
+        passed_price_filter, price = binance_filters.get_price_filter(symbol, self.exchange_info, price)
+        if not passed_price_filter:
+            raise ApiFilterError(symbol, price, "Price")
+
+        passed_quantity_filter, quantity = binance_filters.get_quantity_filter(symbol, self.exchange_info, quantity)
+        if not passed_quantity_filter:
+            raise ApiFilterError(symbol, quantity, "Quantity")
+
         params = {
             'symbol': symbol,
             'side': 'SELL',
@@ -96,3 +113,6 @@ class Binance:
         params = {'symbol': symbol, 'orderId': orderId}
 
         return self._api_query_private(requests.delete, '/api/v3/order', params)
+
+    def exchangeInfo(self) -> dict:
+        return self._api_query(get_api_endpoint(), "/api/v3/exchangeInfo")
