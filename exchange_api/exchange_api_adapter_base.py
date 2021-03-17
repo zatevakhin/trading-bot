@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
 
-import requests
-
 from exchange_api.customtypes import TimeInForceStatus
 
 
@@ -22,7 +20,7 @@ class ExchangeApiAdapterBase(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def sell(self, pair: 'CurrencyPair', price: int, amount: int) -> dict:
+    def sell(self, pair: 'CurrencyPair', price: int, amount: int, timeInForce: TimeInForceStatus) -> dict:
         raise NotImplementedError
 
     @abstractmethod

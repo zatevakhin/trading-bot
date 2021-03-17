@@ -52,9 +52,10 @@ class BinanceAdapter(ExchangeApiAdapterBase):
         timeInForce = _time_in_force_adapter(timeInForce)
         return self.exchange_api.createBuyOrder(pair, price, amount, timeInForce)
 
-    def sell(self, pair: 'CurrencyPair', price: int, amount: int) -> dict:
+    def sell(self, pair: 'CurrencyPair', price: int, amount: int, timeInForce: TimeInForceStatus) -> dict:
         pair = _pair_adapter(pair)
-        return self.exchange_api.createSellOrder(pair, price, amount)
+        timeInForce = _time_in_force_adapter(timeInForce)
+        return self.exchange_api.createSellOrder(pair, price, amount, timeInForce)
 
     def cancel(self, pair: 'CurrencyPair', orderId: int) -> dict:
         pair = _pair_adapter(pair)

@@ -15,6 +15,13 @@ class ApiQueryError(Exception):
         super().__init__(message)
 
 
+class ApiFilterError(Exception):
+    def __init__(self, pair: str, checked_value: float, filter_name: str):
+        message = f"{filter_name} for {pair} doesn't meet filter restrictions. {filter_name} value = {checked_value}"
+
+        super().__init__(message)
+
+
 class TimeInForceStatus(Enum):
     GOOD_TIL_CANCELED = auto()
     IMMEDIATE_OR_CANCEL = auto()
