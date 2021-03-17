@@ -5,7 +5,10 @@ import time
 from urllib.parse import urlencode, urljoin
 
 import requests
+import util
 from candle import Candle
+
+from exchange_api.customtypes import ApiQueryError
 
 BINANCE_API_ENDPOINTS = [
     "https://api.binance.com", "https://api1.binance.com", "https://api2.binance.com", "https://api3.binance.com"
@@ -51,7 +54,7 @@ class Binance:
                      interval: str,
                      startTime: int = None,
                      endTime: int = None,
-                     limit: int = 1000) -> list[Candle]:
+                     limit: int = 1000) -> list['Candle']:
         params = {"symbol": symbol, "interval": interval, "startTime": startTime, "endTime": endTime, "limit": limit}
         params = {k: v for k, v in params.items() if v is not None}
 
@@ -65,7 +68,7 @@ class Binance:
 
         return candles
 
-    def createBuyOrder(self, symbol: str, quantity: int, price: int, timeInForce: str) -> dict:
+    def createBuyOrder(self, symbol: str, price: int, quantity: float, timeInForce: str) -> dict:
         params = {
             'symbol': symbol,
             'side': 'BUY',
@@ -77,7 +80,7 @@ class Binance:
 
         return self._api_query_private(requests.post, '/api/v3/order', params)
 
-    def createSellOrder(self, symbol: str, quantity: int, price: int, timeInForce: str) -> dict:
+    def createSellOrder(self, symbol: str, price: int, quantity: float, timeInForce: str) -> dict:
         params = {
             'symbol': symbol,
             'side': 'SELL',

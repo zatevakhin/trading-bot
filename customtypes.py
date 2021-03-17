@@ -1,7 +1,5 @@
 from enum import Enum, auto
 
-from candle import Candle
-
 
 class CurrencyPair:
     def __init__(self, buy, sell):
@@ -72,8 +70,8 @@ CANDLE_TIME_INTERVALS_BINANCE = (
 class IStrategy(object):
     __strategy__ = None
 
-    def preload(self, candles: list[Candle]):
+    def preload(self, candles: list['Candle']):
         raise NotImplementedError
 
-    def on_tick(self, candle: Candle):
+    def on_tick(self, candle: 'Candle'):
         raise NotImplementedError
