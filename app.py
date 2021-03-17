@@ -1,78 +1,18 @@
 import argparse
-import itertools
-import operator
-import os
 import sys
 import time
 from datetime import datetime
-from threading import Thread
 
 import numpy as np
-import pandas as pd
 import pyqtgraph as pg
 from PyQt5 import QtWidgets
-from pyqtgraph import PlotWidget, QtCore, QtGui, plot
+from pyqtgraph import QtCore, QtGui
 
 import util
-from candle import Candle
 from chart import Chart
 from customtypes import CurrencyPair, TradingMode
-from worker import Worker, WorkerStatus
-
-
-class LiveTicker(Worker):
-    def __init__(self, window):
-        Worker.__init__(self, name="live-ticker")
-        self.window = window
-        self.status = WorkerStatus.WORKING
-        self.period = window.period
-        self.chart = window.chart
-        self.tick = window.tick
-
-    def stop(self):
-        self.status = WorkerStatus.STOPPED
-
-    def run(self):
-        candle = None
-
-        while self.status in [WorkerStatus.WORKING]:
-            if not candle:
-                candle = Candle(interval=self.period)
-
-            candle.tick(self.chart.getCurrentPrice())
-
-            if candle.is_closed():
-                self.window.chart_tick(candle)
-                candle = Candle(interval=self.period, opn=candle.current, high=candle.current, low=candle.current)
-
-            for _ in range(self.tick + 1):
-                if self.status not in [WorkerStatus.WORKING]:
-                    break
-
-                time.sleep(1)
-
-
-class BacktestTicker(Worker):
-    def __init__(self, window, candles):
-        Worker.__init__(self, name="backtest-ticker")
-        self.window = window
-        self.candles = candles
-        self.status = WorkerStatus.WORKING
-        self.tick = window.backtest_tick
-
-    def stop(self):
-        self.status = WorkerStatus.STOPPED
-
-    def run(self):
-        candle = None
-
-        for candle in self.candles:
-            self.window.chart_tick(candle)
-
-            if self.status not in [WorkerStatus.WORKING]:
-                break
-
-            time.sleep(self.tick)
+from workers.backtest_ticker import BacktestTicker
+from workers.live_ticker import LiveTicker
 
 
 class TimeAxisItem(pg.AxisItem):
@@ -131,7 +71,6 @@ class CandlestickItem(pg.GraphicsObject):
         p.end()
 
     def paint(self, p, *args):
-        # print("DRAW")
         # p.drawPicture(0, 0, self.picture)
         self.picture.play(p)
 
@@ -159,9 +98,17 @@ class MainWindow(pg.GraphicsView):
         # Configure view
         self.configure_view()
 
+        # TODO: Add proxy
+        # self.proxy_switcher = ProxySwitcher(PROXY_LIST, 600)
+        # self.proxy_switcher.start()
+
     def closeEvent(self, event):
         self.strategy_ticker_thread.stop()
         self.strategy_ticker_thread.join()
+
+        # self.proxy_switcher.stop()
+        # self.proxy_switcher.join()
+
         event.accept()
 
     def configure_trader(self, args):
