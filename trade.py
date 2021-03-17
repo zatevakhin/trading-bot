@@ -2,7 +2,7 @@ from termcolor import colored
 
 from candle import Candle
 from customtypes import TradeStatus, TradingMode
-from exchange_api.customtypes import ApiQueryError
+from exchange_api.customtypes import ApiQueryError, TimeInForceStatus
 from exchange_api.exchange_api_adapter_base import ExchangeApiAdapterBase
 
 
@@ -20,9 +20,20 @@ class Trade(object):
         self.stop_loss_percent = stop_loss_percent
         self.stop_loss = 0
 
+        self.prop_limit = 0
+        self.prop_limit_price = 0
+
         self.bought_amount = None
 
         assert (stop_loss_percent <= 100.0 or stop_loss_percent >= 0.0), "Incorrect stop loss limit!"
+
+    def set_prop_limit(self, candle, percent):
+        new_prop_limit = (candle.average / 100) * percent
+
+        if new_prop_limit > self.prop_limit:
+            print(f">>> Prop limit updated: {self.prop_limit} -> {new_prop_limit}")
+            self.prop_limit = new_prop_limit
+            self.prop_limit_price = candle.average
 
     def open(self, candle: Candle):
         self.open_candle = candle
@@ -37,16 +48,14 @@ class Trade(object):
             amount = (self.budget / self.entry_price)
 
             try:
-                trade = self.exchange.buy(self.pair, self.entry_price, amount)
-            except ApiQueryError:
+                trade = self.exchange.buy(self.pair, self.entry_price, amount, TimeInForceStatus.FILL_OR_KILL)
+            except ApiQueryError as e:
+                print(self.pair, amount, self.entry_price)
+                print(e)
                 return
 
-            print("exchange.buy", trade)
-
-            resulting_trades = trade.get('resultingTrades', [])
-
-            bought_list = map(lambda t: float(t['takerAdjustment']), resulting_trades)
-            self.bought_amount = sum(bought_list)
+            print(f"exchange.buy = {trade}")
+            # self.bought_amount = get quantity from trade
 
         print("Trade", colored("opened", 'green'))
 
@@ -60,9 +69,15 @@ class Trade(object):
         print("Trade", colored("closed", 'red'))
 
         if self.mode in [TradingMode.LIVE]:
-            print("exchange.sell", self.exchange.sell(self.pair, self.exit_price, self.bought_amount))
+            trade = self.exchange.sell(self.pair, self.exit_price, self.bought_amount, TimeInForceStatus.FILL_OR_KILL)
+            print("exchange.sell", trade)
 
     def tick(self, candle):
+        if self.prop_limit:
+            if (self.prop_limit_price - self.prop_limit) >= float(candle.average):
+                print(colored(">>>", 'green', attrs=["bold"]), "Prop limit")
+                self.close(candle)
+
         if self.stop_loss:
             if (self.entry_price - self.stop_loss) >= float(candle.average):
                 print(colored("STOP LOSS", 'red', attrs=["bold"]))
