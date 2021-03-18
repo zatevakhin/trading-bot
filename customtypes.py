@@ -16,11 +16,6 @@ class TradeStatus(Enum):
     CLOSED = auto()
 
 
-class Exchange(Enum):
-    BINANCE = auto()
-    POLONIEX = auto()
-
-
 class TradingMode(Enum):
     BACKTEST = auto()
     LIVE_TEST = auto()

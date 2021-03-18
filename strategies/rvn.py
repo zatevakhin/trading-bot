@@ -12,7 +12,7 @@ from utils.trand_indicators import *
 
 from strategies.strategybase import StrategyBase
 
-MIN_TREND_LINE_LENGTH = 3
+MIN_TREND_LINE_LENGTH = 5
 
 
 class TrendState(Enum):
@@ -22,7 +22,7 @@ class TrendState(Enum):
 
 
 class Strategy(StrategyBase):
-    __strategy__ = 'default'
+    __strategy__ = 'rvn.b'
 
     def __init__(self, mode, budget, chart, exchange):
         self.exchange = exchange
@@ -75,32 +75,32 @@ class Strategy(StrategyBase):
 
         RSI = curr_row["RSI"]
 
-        DI_P = curr_row["DI+"]
-        DI_M = curr_row["DI-"]
-        ADX = curr_row["ADX"]
+        # DI_P = curr_row["DI+"]
+        # DI_M = curr_row["DI-"]
+        # ADX = curr_row["ADX"]
 
         EMA50 = curr_row["EMA50"]
         EMA200 = curr_row["EMA200"]
 
-        P_EMA50 = prev_row["EMA50"]
-        P_EMA200 = prev_row["EMA200"]
+        # P_EMA50 = prev_row["EMA50"]
+        # P_EMA200 = prev_row["EMA200"]
 
         EMA_50_200_DEAD_CROSS = EMA200 > EMA50
         EMA_50_200_GOLDEN_CROSS = EMA50 > EMA200
 
-        EMA200_FALLING = check_frame_trend(df, 5, "EMA200", operator.ge)
-        EMA50_FALLING = check_frame_trend(df, 3, "EMA50", operator.ge)
-        EMA50_RISING = check_frame_trend(df, 2, "EMA50", operator.le)
+        # EMA200_FALLING = check_frame_trend(df, 5, "EMA200", operator.ge)
+        # EMA50_FALLING = check_frame_trend(df, 3, "EMA50", operator.ge)
+        # EMA50_RISING = check_frame_trend(df, 2, "EMA50", operator.le)
 
-        RSI_RISING = check_frame_trend(df, 2, "RSI", operator.ge)
+        # RSI_RISING = check_frame_trend(df, 2, "RSI", operator.ge)
 
-        price_lower_that_ema_200 = EMA200 > self.currentPrice
-        price_upper_that_ema_200 = EMA200 < self.currentPrice
-        price_lower_that_ema_50 = EMA50 > self.currentPrice
-        price_upper_that_ema_50 = EMA50 < self.currentPrice
+        # price_lower_that_ema_200 = EMA200 > self.currentPrice
+        # price_upper_that_ema_200 = EMA200 < self.currentPrice
+        # price_lower_that_ema_50 = EMA50 > self.currentPrice
+        # price_upper_that_ema_50 = EMA50 < self.currentPrice
 
-        prev_ema_50_200_diff = abs(P_EMA50 - P_EMA200)
-        curr_ema_50_200_diff = abs(EMA50 - EMA200)
+        # prev_ema_50_200_diff = abs(P_EMA50 - P_EMA200)
+        # curr_ema_50_200_diff = abs(EMA50 - EMA200)
 
         can_open_new_trade = len(open_trades) < self.max_num_trades
 
@@ -111,6 +111,50 @@ class Strategy(StrategyBase):
 
         p_uptrend = get_trend_aproximation(df, self.n_uptrend, indicator_y_uptrend)
         p_downtrend = get_trend_aproximation(df, self.n_downtrend, indicator_y_downtrend)
+
+        ###
+        ### TESTS
+        ###
+        # python app.py --pair RVN,USDT --exchange binance --mode backtest --t-start 1615932000 --t-end 1616065325 --period 1m --tick-b 0.1 --strategy rvn.b
+        # Summary profit  9.95% / stupid
+        # Summary profit  6.13% / not stupid
+
+        # if EMA_50_200_GOLDEN_CROSS:
+        #     UP_TREND = check_uptrend(df, p_uptrend, aggresive=True)
+        #     DOWN_TREND = check_downtrend(df, p_downtrend, aggresive=True)
+        # else:
+        #     UP_TREND = check_uptrend(df, p_uptrend, aggresive=False)
+        #     DOWN_TREND = check_downtrend(df, p_downtrend, aggresive=True)
+
+        # Summary profit  4.99% / not stupid, aggr
+        # Summary profit  0.59% / not stupid, not aggr
+
+        # UP_TREND = check_uptrend(df, p_uptrend, aggresive=False)
+        # DOWN_TREND = check_downtrend(df, p_downtrend, aggresive=False)
+
+        # Summary profit  9.16% / stupid and aggr
+        # Summary profit  10.02% / stupid and not aggr
+        # Summary profit  10.02% / stupid and up trend aggr (EMA_50_200_GOLDEN_CROSS), down not aggr
+        # Summary profit  10.02% / stupid and up and down trend aggr (EMA_50_200_GOLDEN_CROSS)
+        # Summary profit  10.02% / stupid and down trend aggr (EMA_50_200_GOLDEN_CROSS), up not aggr
+
+        # UP_TREND = stupid_check_uptrend(df, p_uptrend, aggresive=False)
+        # DOWN_TREND = stupid_check_downtrend(df, p_downtrend, aggresive=False)
+
+        # Trades done: 34, Summary profit:  9.90%
+        # MIN_TREND_LINE_LENGTH = 2
+        # Trades done: 34, Summary profit:  10.02%
+        # MIN_TREND_LINE_LENGTH = 3
+        # Trades done: 34, Summary profit:  10.02%
+        # MIN_TREND_LINE_LENGTH = 4
+        # Trades done: 32, Summary profit:  10.94%
+        # MIN_TREND_LINE_LENGTH = 5
+        # Trades done: 33, Summary profit:  10.77%
+        # MIN_TREND_LINE_LENGTH = 6
+
+        ###
+        ### TESTS END
+        ###
 
         UP_TREND = stupid_check_uptrend(df, p_uptrend, aggresive=False)
         DOWN_TREND = stupid_check_downtrend(df, p_downtrend, aggresive=False)
@@ -124,10 +168,10 @@ class Strategy(StrategyBase):
         current_n_uptrend = [MIN_TREND_LINE_LENGTH, self.n_uptrend + 1][UP_TREND]
         current_n_downtrend = [MIN_TREND_LINE_LENGTH, self.n_downtrend + 1][DOWN_TREND]
 
-        if UP_TREND and current_n_uptrend > self.n_uptrend:
+        if UP_TREND:
             TREND_STATE = TrendState.UPTREND
 
-        if DOWN_TREND and current_n_downtrend > self.n_downtrend:
+        if DOWN_TREND:
             TREND_STATE = TrendState.DOWNTREND
 
         print(self.PREVIOUS_TREND, TREND_STATE)
@@ -135,7 +179,6 @@ class Strategy(StrategyBase):
         if can_open_new_trade:
             if TREND_STATE in [TrendState.UPTREND, TrendState.UNDEFINED]:
                 if self.PREVIOUS_TREND in [TrendState.DOWNTREND]:
-                    # if current_n_downtrend == MIN_TREND_LINE_LENGTH:
                     if RSI <= 50:
                         if trade.open(candle):
                             self.trades.append(trade)
@@ -206,5 +249,6 @@ class Strategy(StrategyBase):
         if tradesProfitPercent:
             profit = sum(tradesProfitPercent)
             pf = colored("{: 3.2f}%".format(profit), 'white', attrs=["bold"])
+            tf = colored("{}".format(len(tradesProfitPercent)), 'yellow')
 
-            print(f"Summary profit {pf}")
+            print(f"Trades done: {tf}, Summary profit: {pf}")

@@ -3,8 +3,6 @@ import operator
 
 import numpy as np
 
-MIN_TREND_LINE_LENGTH = 3
-
 
 def get_trend_aproximation(df, n, indicator):
     # n - passed candles
