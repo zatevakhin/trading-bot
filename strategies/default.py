@@ -110,8 +110,8 @@ class Strategy(StrategyBase):
         p_uptrend = get_trend_aproximation(df, self.n_uptrend, indicator_y_downtrend)
         p_downtrend = get_trend_aproximation(df, self.n_downtrend, indicator_y_uptrend)
 
-        UP_TREND = check_uptrend(df, p_uptrend, True)
-        DOWN_TREND = check_downtrend(df, p_downtrend, True)
+        UP_TREND = stupid_check_uptrend(df, p_uptrend, aggresive=True)
+        DOWN_TREND = stupid_check_downtrend(df, p_downtrend, aggresive=True)
 
         TREND_STATE = TrendState.UNDEFINED
 
@@ -128,23 +128,28 @@ class Strategy(StrategyBase):
         if DOWN_TREND and current_n_downtrend > self.n_downtrend:
             TREND_STATE = TrendState.DOWNTREND
 
+        print(self.PREVIOUS_TREND, TREND_STATE)
+
         if can_open_new_trade:
-            if TREND_STATE == TrendState.UPTREND:
-                if self.PREVIOUS_TREND == TrendState.DOWNTREND:
-                    if current_n_downtrend == MIN_TREND_LINE_LENGTH:
-                        if RSI <= 60:
-                            if trade.open(candle):
-                                self.trades.append(trade)
+            if TREND_STATE in [TrendState.UPTREND, TrendState.UNDEFINED]:
+                if self.PREVIOUS_TREND in [TrendState.DOWNTREND]:
+                    # if current_n_downtrend == MIN_TREND_LINE_LENGTH:
+                    if RSI <= 60:
+                        if trade.open(candle):
+                            self.trades.append(trade)
+
         #--------------------------
-        if TREND_STATE == TrendState.DOWNTREND:
-            for trade in open_trades:
-                if abs(trade.profit(candle)) >= 0.4:
-                    trade.close(candle)
+
+        if TREND_STATE in [TrendState.DOWNTREND, TrendState.UNDEFINED]:
+            if self.PREVIOUS_TREND in [TrendState.UPTREND]:
+                for trade in open_trades:
+                    if abs(trade.profit(candle)) >= 0.5:
+                        trade.close(candle)
 
         #--------------------------
         if TREND_STATE == TrendState.UNDEFINED:
             for trade in open_trades:
-                trade.set_prop_limit(candle, 0.5)
+                trade.set_prop_limit(candle, 0.4)
 
         self.n_uptrend = current_n_uptrend
         self.n_downtrend = current_n_downtrend
