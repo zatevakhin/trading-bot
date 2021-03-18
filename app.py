@@ -15,6 +15,7 @@ from exchange_api import get_exchange_api
 from utils.strategy_manager import StrategyManager
 from workers.backtest_ticker import BacktestTicker
 from workers.live_ticker import LiveTicker
+from workers.websocket_live_ticker import WebsocketLiveTicker
 
 
 class TimeAxisItem(pg.AxisItem):
@@ -123,6 +124,7 @@ class MainWindow(pg.GraphicsView):
         self.backtest_tick = float(args.tick_b)
         self.period = util.interval_mapper(args.period)
         self.preload = int(args.preload)
+        self.websocket = args.websocket
 
         self.mode = util.mode_mapper(args.mode)
 
@@ -226,7 +228,10 @@ class MainWindow(pg.GraphicsView):
         self.curve_di_m.setPen(pg.mkPen(color=(180, 120, 40), width=1))
 
         if self.mode in [TradingMode.LIVE, TradingMode.LIVE_TEST]:
-            self.strategy_ticker_thread = LiveTicker(self)
+            if self.websocket:
+                self.strategy_ticker_thread = WebsocketLiveTicker(self)
+            else:
+                self.strategy_ticker_thread = LiveTicker(self)
         else:
             self.strategy_ticker_thread = BacktestTicker(self, candles)
 
@@ -301,6 +306,7 @@ if __name__ == "__main__":
 
     p.add_argument('--period', '-p', default='5m', help=f"Timespan width for candle.")
     p.add_argument('--period-help', '-P', action='store_true', help=f"Show period help.")
+    p.add_argument('--websocket', '-w', action='store_true', help=f"Use websocket to update candle.")
 
     p.add_argument('--exchange', '-e', default=None, help=f"Exchange used for trading.")
     p.add_argument('--strategy', '-s', default='default', help=f"Trading strategy.")

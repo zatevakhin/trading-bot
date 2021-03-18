@@ -66,7 +66,7 @@ class Binance:
         for binance_candle in binance_candles:
             (o_time, o, h, l, c, v, c_time, *x) = binance_candle
             candles.append(
-                Candle(interval, timestamp=c_time / 1000, opn=float(o), close=float(c), high=float(h), low=float(l)))
+                Candle(interval, timestamp=o_time / 1000, opn=float(o), close=float(c), high=float(h), low=float(l)))
 
         return candles
 
