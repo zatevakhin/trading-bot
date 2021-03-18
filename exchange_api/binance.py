@@ -9,6 +9,7 @@ from candle import Candle
 
 from exchange_api.customtypes import BinanceFilterError, BinanceQueryError
 from exchange_api.utils import binance_filters
+from exchange_api.utils.order_convert import convert_binance_to_internal
 
 BINANCE_API_ENDPOINTS = [
     "https://api.binance.com", "https://api1.binance.com", "https://api2.binance.com", "https://api3.binance.com"
@@ -69,7 +70,7 @@ class Binance:
 
         return candles
 
-    def createBuyOrder(self, symbol: str, price: int, quantity: float, timeInForce: str) -> dict:
+    def createBuyOrder(self, symbol: str, price: int, quantity: float, timeInForce: str) -> 'Order':
         passed_price_filter, price = binance_filters.get_price_filter(symbol, self.exchange_info, price)
         if not passed_price_filter:
             raise BinanceFilterError(symbol, price, "Price")
@@ -87,17 +88,20 @@ class Binance:
             'price': price
         }
 
-        return self._api_query_private(requests.post, '/api/v3/order', params)
+        order = self._api_query_private(requests.post, '/api/v3/order', params)
+        return convert_binance_to_internal(order)
 
-    def createBuyMarketOrder(self, symbol: str, quantity: float) -> dict:
+    def createBuyMarketOrder(self, symbol: str, quantity: float) -> 'Order':
         passed_quantity_filter, quantity = binance_filters.get_quantity_filter(symbol, self.exchange_info, quantity)
         if not passed_quantity_filter:
             raise BinanceFilterError(symbol, quantity, "Quantity")
 
         params = {'symbol': symbol, 'side': 'BUY', 'type': 'MARKET', 'quantity': quantity}
-        return self._api_query_private(requests.post, '/api/v3/order', params)
 
-    def createSellOrder(self, symbol: str, price: int, quantity: float, timeInForce: str) -> dict:
+        order = self._api_query_private(requests.post, '/api/v3/order', params)
+        return convert_binance_to_internal(order)
+
+    def createSellOrder(self, symbol: str, price: int, quantity: float, timeInForce: str) -> 'Order':
         passed_price_filter, price = binance_filters.get_price_filter(symbol, self.exchange_info, price)
         if not passed_price_filter:
             raise BinanceFilterError(symbol, price, "Price")
@@ -115,15 +119,18 @@ class Binance:
             'price': price
         }
 
-        return self._api_query_private(requests.post, '/api/v3/order', params)
+        order = self._api_query_private(requests.post, '/api/v3/order', params)
+        return convert_binance_to_internal(order)
 
-    def createSellMarketOrder(self, symbol: str, quantity: float) -> dict:
+    def createSellMarketOrder(self, symbol: str, quantity: float) -> 'Order':
         passed_quantity_filter, quantity = binance_filters.get_quantity_filter(symbol, self.exchange_info, quantity)
         if not passed_quantity_filter:
             raise BinanceFilterError(symbol, quantity, "Quantity")
 
         params = {'symbol': symbol, 'side': 'SELL', 'type': 'MARKET', 'quantity': quantity}
-        return self._api_query_private(requests.post, '/api/v3/order', params)
+
+        order = self._api_query_private(requests.post, '/api/v3/order', params)
+        return convert_binance_to_internal(order)
 
     def cancel(self, symbol: str, orderId: int) -> dict:
         params = {'symbol': symbol, 'orderId': orderId}

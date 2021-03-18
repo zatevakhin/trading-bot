@@ -1,5 +1,6 @@
 from termcolor import colored
 
+from basetypes.order import Order, OrderStatus
 from candle import Candle
 from customtypes import TradeStatus, TradingMode
 from exchange_api.customtypes import BinanceQueryError, TimeInForceStatus
@@ -23,7 +24,7 @@ class Trade(object):
         self.prop_limit = 0
         self.prop_limit_price = 0
 
-        self.bought_amount = None
+        self.exchange_order: 'Order' = None
 
         assert (stop_loss_percent <= 100.0 or stop_loss_percent >= 0.0), "Incorrect stop loss limit!"
 
@@ -48,29 +49,50 @@ class Trade(object):
             amount = (self.budget / self.entry_price)
 
             try:
-                trade = self.exchange.buy(self.pair, self.entry_price, amount, TimeInForceStatus.FILL_OR_KILL)
+                order = self.exchange.buy(self.pair, self.entry_price, amount, TimeInForceStatus.FILL_OR_KILL)
+
+                if not order.is_status(OrderStatus.FILLED):
+                    order = self.exchange.buyMarketPrice(self.pair, amount)
+
             except BinanceQueryError as e:
-                print(self.pair, amount, self.entry_price)
                 print(e)
                 return
 
-            print(f"exchange.buy = {trade}")
-            # self.bought_amount = get quantity from trade
+            if not order.is_status(OrderStatus.FILLED):
+                return
+
+            print(order)
+
+            self.exchange_order = order
 
         print("Trade", colored("opened", 'green'))
 
         return True
 
     def close(self, candle):
-        self.close_candle = candle
+        if self.mode in [TradingMode.LIVE]:
+            quantity = self.exchange_order.quantity
 
-        self.status = TradeStatus.CLOSED
-        self.exit_price = float(candle.average)
+            try:
+                order = self.exchange.sell(self.pair, float(candle.average), quantity, TimeInForceStatus.FILL_OR_KILL)
+
+                if not order.is_status(OrderStatus.FILLED):
+                    order = self.exchange.sellMarketPrice(self.pair, quantity)
+
+            except BinanceQueryError as e:
+                print(e)
+                return
+
+            if not order.is_status(OrderStatus.FILLED):
+                return
+
+            print(order)
+
         print("Trade", colored("closed", 'red'))
 
-        if self.mode in [TradingMode.LIVE]:
-            trade = self.exchange.sell(self.pair, self.exit_price, self.bought_amount, TimeInForceStatus.FILL_OR_KILL)
-            print("exchange.sell", trade)
+        self.close_candle = candle
+        self.exit_price = float(candle.average)
+        self.status = TradeStatus.CLOSED
 
     def tick(self, candle):
         if self.prop_limit:

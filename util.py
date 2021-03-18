@@ -1,7 +1,8 @@
 import time
 
 import userconfig
-from customtypes import CandleTimeInterval, Exchange, TradingMode
+from basetypes.exchange import Exchange
+from customtypes import CandleTimeInterval, TradingMode
 
 MAP_CUSTOM_TYPE_TO_POLONIEX = {
     CandleTimeInterval.I_5M: "300",
