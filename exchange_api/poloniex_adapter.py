@@ -43,14 +43,25 @@ class PoloniexAdapter(ExchangeApiAdapterBase):
         interval = _interval_adapter(interval)
         return self.exchange_api.returnChartData(pair, interval, start, end)
 
-    def buy(self, pair: 'CurrencyPair', price: int, amount: int, timeInForce: TimeInForceStatus) -> dict:
+    def buy(self, pair: 'CurrencyPair', price: float, amount: float, timeInForce: TimeInForceStatus) -> dict:
         pair = _pair_adapter(pair)
         timeInForce = _time_in_force_adapter(pair)
         return self.exchange_api.buy(pair, price, amount, timeInForce)
 
-    def sell(self, pair: 'CurrencyPair', price: int, amount: int) -> dict:
+    def buyMarketPrice(self, pair: str, amount: float, timeInForce: TimeInForceStatus) -> dict:
         pair = _pair_adapter(pair)
-        return self.exchange_api.sell(pair, price, amount)
+        timeInForce = _time_in_force_adapter(pair)
+        return self.exchange_api.buy(pair, 0, amount, timeInForce)
+
+    def sell(self, pair: 'CurrencyPair', price: float, amount: float, timeInForce: TimeInForceStatus) -> dict:
+        pair = _pair_adapter(pair)
+        timeInForce = _time_in_force_adapter(pair)
+        return self.exchange_api.sell(pair, price, amount, timeInForce)
+
+    def sellMarketPrice(self, pair: str, amount: float, timeInForce: TimeInForceStatus) -> dict:
+        pair = _pair_adapter(pair)
+        timeInForce = _time_in_force_adapter(pair)
+        return self.exchange_api.sell(pair, 0, amount, timeInForce)
 
     def cancel(self, pair: 'CurrencyPair', orderId: int) -> dict:
         pair = _pair_adapter(pair)

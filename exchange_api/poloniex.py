@@ -6,7 +6,7 @@ import urllib
 import requests
 from candle import Candle
 
-from exchange_api.customtypes import ApiQueryError
+from exchange_api.customtypes import PoloniexQueryError
 
 POLONIEX_PUBLIC_API = "https://poloniex.com/public"
 POLONIEX_PRIVATE_API = "https://poloniex.com/tradingApi"
@@ -38,7 +38,7 @@ class Poloniex:
             assert (True, "Wat?")
 
         if resp.status_code != 200:
-            raise ApiQueryError(status_code=resp.status_code, data=resp.json())
+            raise PoloniexQueryError(status_code=resp.status_code, data=resp.json())
 
         return resp.json()
 
@@ -97,7 +97,7 @@ class Poloniex:
         params = {"currencyPair": currencyPair}
         return self._api_query(POLONIEX_PRIVATE_API, "returnTradeHistory", params)
 
-    def buy(self, currencyPair: str, rate: int, amount: int, timeInForce: dict[str, bool]) -> dict:
+    def buy(self, currencyPair: str, rate: float, amount: float, timeInForce: dict[str, bool]) -> dict:
         # Places a limit buy order in a given market. Required POST parameters are "currencyPair", "rate", and "amount".
         # If successful, the method will return the order number.
 
@@ -108,12 +108,15 @@ class Poloniex:
 
         return self._api_query(POLONIEX_PRIVATE_API, "buy", params)
 
-    def sell(self, currencyPair: str, rate: int, amount: int) -> dict:
+    def sell(self, currencyPair: str, rate: float, amount: float, timeInForce: dict[str, bool]) -> dict:
         # Places a sell order in a given market. Required POST parameters are "currencyPair", "rate", and "amount".
         # If successful, the method will return the order number.
 
         # https://docs.poloniex.com/#sell
         params = {"currencyPair": currencyPair, "rate": rate, "amount": amount}
+        for mode, status in timeInForce.items():
+            params[mode] = int(status)
+
         return self._api_query(POLONIEX_PRIVATE_API, "sell", params)
 
     def cancelOrder(self, currencyPair: str, orderNumber: int) -> dict:
