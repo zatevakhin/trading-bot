@@ -1,7 +1,19 @@
 from enum import Enum, auto
 
 
-class ApiQueryError(Exception):
+class PoloniexQueryError(Exception):
+    def __init__(self, status_code: int = 0, data: str = ""):
+        self.status_code = status_code
+        if data:
+            self.msg = data['error']
+        else:
+            self.msg = None
+        message = f"{status_code} {self.msg}"
+
+        super().__init__(message)
+
+
+class BinanceQueryError(Exception):
     def __init__(self, status_code: int = 0, data: str = ""):
         self.status_code = status_code
         if data:
@@ -15,7 +27,7 @@ class ApiQueryError(Exception):
         super().__init__(message)
 
 
-class ApiFilterError(Exception):
+class BinanceFilterError(Exception):
     def __init__(self, pair: str, checked_value: float, filter_name: str):
         message = f"{filter_name} for {pair} doesn't meet filter restrictions. {filter_name} value = {checked_value}"
 

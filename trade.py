@@ -2,7 +2,7 @@ from termcolor import colored
 
 from candle import Candle
 from customtypes import TradeStatus, TradingMode
-from exchange_api.customtypes import ApiQueryError, TimeInForceStatus
+from exchange_api.customtypes import BinanceQueryError, TimeInForceStatus
 from exchange_api.exchange_api_adapter_base import ExchangeApiAdapterBase
 
 
@@ -49,7 +49,7 @@ class Trade(object):
 
             try:
                 trade = self.exchange.buy(self.pair, self.entry_price, amount, TimeInForceStatus.FILL_OR_KILL)
-            except ApiQueryError as e:
+            except BinanceQueryError as e:
                 print(self.pair, amount, self.entry_price)
                 print(e)
                 return

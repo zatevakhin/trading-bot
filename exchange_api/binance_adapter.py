@@ -47,15 +47,23 @@ class BinanceAdapter(ExchangeApiAdapterBase):
 
         return self.exchange_api.returnKlines(pair, interval, startTime, endTime)
 
-    def buy(self, pair: 'CurrencyPair', price: int, amount: int, timeInForce: TimeInForceStatus) -> dict:
+    def buy(self, pair: 'CurrencyPair', price: float, amount: float, timeInForce: TimeInForceStatus) -> dict:
         pair = _pair_adapter(pair)
         timeInForce = _time_in_force_adapter(timeInForce)
         return self.exchange_api.createBuyOrder(pair, price, amount, timeInForce)
 
-    def sell(self, pair: 'CurrencyPair', price: int, amount: int, timeInForce: TimeInForceStatus) -> dict:
+    def buyMarketPrice(self, pair: str, amount: float, _=TimeInForceStatus.GOOD_TIL_CANCELED) -> dict:
+        pair = _pair_adapter(pair)
+        return self.exchange_api.createBuyMarketOrder(pair, amount)
+
+    def sell(self, pair: 'CurrencyPair', price: float, amount: float, timeInForce: TimeInForceStatus) -> dict:
         pair = _pair_adapter(pair)
         timeInForce = _time_in_force_adapter(timeInForce)
         return self.exchange_api.createSellOrder(pair, price, amount, timeInForce)
+
+    def sellMarketPrice(self, pair: str, amount: float, _=TimeInForceStatus.GOOD_TIL_CANCELED) -> dict:
+        pair = _pair_adapter(pair)
+        return self.exchange_api.createSellMarketOrder(pair, amount)
 
     def cancel(self, pair: 'CurrencyPair', orderId: int) -> dict:
         pair = _pair_adapter(pair)

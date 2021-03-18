@@ -16,11 +16,19 @@ class ExchangeApiAdapterBase(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def buy(self, pair: 'CurrencyPair', price: int, amount: int, timeInForce: TimeInForceStatus) -> dict:
+    def buy(self, pair: 'CurrencyPair', price: float, amount: float, timeInForce: TimeInForceStatus) -> dict:
         raise NotImplementedError
 
     @abstractmethod
-    def sell(self, pair: 'CurrencyPair', price: int, amount: int, timeInForce: TimeInForceStatus) -> dict:
+    def buyMarketPrice(self, symbol: str, amount: float, timeInForce: TimeInForceStatus) -> dict:
+        raise NotImplementedError
+
+    @abstractmethod
+    def sell(self, pair: 'CurrencyPair', price: float, amount: float, timeInForce: TimeInForceStatus) -> dict:
+        raise NotImplementedError
+
+    @abstractmethod
+    def sellMarketPrice(self, symbol: str, amount: float, timeInForce: TimeInForceStatus) -> dict:
         raise NotImplementedError
 
     @abstractmethod
