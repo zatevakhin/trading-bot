@@ -93,6 +93,7 @@ class MainWindow(pg.GraphicsView):
 
         # Configure main window
         self.setWindowTitle(f"Trader T800: {self.pair}")
+        self.setWindowIcon(QtGui.QIcon('resources/icon.png'))
 
         self.layout = pg.GraphicsLayout()
         self.setCentralWidget(self.layout)
