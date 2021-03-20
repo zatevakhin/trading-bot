@@ -105,6 +105,7 @@ if __name__ == "__main__":
 
     p.add_argument('--period', '-p', default='5m', help=f"Timespan width for candle.")
     p.add_argument('--period-help', '-P', action='store_true', help=f"Show period help.")
+    p.add_argument('--websocket', '-w', action='store_true', help=f"Use websocket to update candle.")
 
     p.add_argument('--exchange', '-e', default=None, help=f"Exchange used for trading.")
     p.add_argument('--strategy', '-s', default='default', help=f"Trading strategy.")
