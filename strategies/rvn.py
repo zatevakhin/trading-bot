@@ -12,6 +12,7 @@ from utils.trand_indicators import *
 
 from strategies.strategybase import StrategyBase
 
+
 MIN_TREND_LINE_LENGTH = 2
 
 

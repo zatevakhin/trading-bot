@@ -29,7 +29,7 @@ class Trade(object):
         assert (stop_loss_percent <= 100.0 or stop_loss_percent >= 0.0), "Incorrect stop loss limit!"
 
     def set_prop_limit(self, candle, percent):
-        new_prop_limit = (candle.average / 100) * percent
+        new_prop_limit = (candle.low / 100) * percent
 
         if new_prop_limit > self.prop_limit:
             print(f">>> Prop limit updated: {self.prop_limit} -> {new_prop_limit}")

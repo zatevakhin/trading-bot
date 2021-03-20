@@ -1,4 +1,6 @@
+import calendar
 import time
+from datetime import datetime
 
 import util
 
@@ -10,9 +12,13 @@ class Candle(object):
         self.close = close
         self.high = high
         self.low = low
-        self.timestamp = int(timestamp or time.time())
         self.interval = util.interval_mapper_to_seconds(interval)
         self.average = float(average or 0)
+
+        timestamp_local = calendar.timegm(datetime.utcnow().utctimetuple())
+        timestamp_local = timestamp_local - (timestamp_local % 60)
+
+        self.timestamp = int(timestamp or timestamp_local)
 
         if not self.average:
             prices = [self.high, self.low, self.close]
@@ -32,7 +38,10 @@ class Candle(object):
         if self.low is None or self.current < self.low:
             self.low = self.current
 
-        if time.time() >= (self.timestamp + self.interval):
+        timestamp_local = calendar.timegm(datetime.utcnow().utctimetuple())
+        future_close_time = (self.timestamp + self.interval)
+
+        if timestamp_local >= future_close_time:
             self.close = self.current
             self.average = (self.high + self.low + self.close) / float(3)
 
