@@ -57,14 +57,29 @@ class Binance:
                      startTime: int = None,
                      endTime: int = None,
                      limit: int = 1000) -> list['Candle']:
-        params = {"symbol": symbol, "interval": interval, "startTime": startTime, "endTime": endTime, "limit": limit}
-        params = {k: v for k, v in params.items() if v is not None}
 
-        binance_candles = self._api_query(get_api_endpoint(), "/api/v3/klines", params)
+        received_klines = []
+        start_from = startTime
+
+        while start_from < endTime:
+            params = {
+                "symbol": symbol,
+                "interval": interval,
+                "startTime": start_from,
+                "endTime": endTime,
+                "limit": limit
+            }
+
+            params = {k: v for k, v in params.items() if v is not None}
+            klines = self._api_query(get_api_endpoint(), "/api/v3/klines", params)
+
+            received_klines = [*received_klines, *klines]
+            close_time = int(received_klines[len(received_klines) - 1][6])  # 6 - close time
+            start_from = close_time
 
         candles = []
-        for binance_candle in binance_candles:
-            (o_time, o, h, l, c, v, c_time, *x) = binance_candle
+        for kline in received_klines:
+            (o_time, o, h, l, c, v, c_time, *x) = kline
             candles.append(
                 Candle(interval, timestamp=o_time / 1000, opn=float(o), close=float(c), high=float(h), low=float(l)))
 
