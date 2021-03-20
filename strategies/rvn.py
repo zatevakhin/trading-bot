@@ -12,7 +12,7 @@ from utils.trand_indicators import *
 
 from strategies.strategybase import StrategyBase
 
-MIN_TREND_LINE_LENGTH = 5
+MIN_TREND_LINE_LENGTH = 2
 
 
 class TrendState(Enum):
@@ -115,7 +115,7 @@ class Strategy(StrategyBase):
         ###
         ### TESTS
         ###
-        # python app.py --pair RVN,USDT --exchange binance --mode backtest --t-start 1615932000 --t-end 1616065325 --period 1m --tick-b 0.1 --strategy rvn.b
+        # python app.py --pair RVN,USDT --exchange binance --mode backtest --t-start 1615932000 --t-end 1615973940 --period 1m --tick-b 0.1 --strategy rvn.b
         # Summary profit  9.95% / stupid
         # Summary profit  6.13% / not stupid
 
@@ -184,7 +184,6 @@ class Strategy(StrategyBase):
                             self.trades.append(trade)
 
         #--------------------------
-
         if TREND_STATE in [TrendState.DOWNTREND, TrendState.UNDEFINED]:
             if self.PREVIOUS_TREND in [TrendState.UPTREND]:
                 for trade in open_trades:
@@ -192,7 +191,7 @@ class Strategy(StrategyBase):
                         trade.close(candle)
 
         #--------------------------
-        if TREND_STATE == TrendState.UNDEFINED:
+        if TREND_STATE == TrendState.UPTREND:
             for trade in open_trades:
                 trade.set_prop_limit(candle, 0.6)
 
