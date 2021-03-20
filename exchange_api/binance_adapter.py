@@ -42,8 +42,8 @@ class BinanceAdapter(ExchangeApiAdapterBase):
         if interval is None:
             raise ValueError("Wrong interval")
 
-        startTime = start * 1000,
-        endTime = end * 1000,
+        startTime = start * 1000
+        endTime = end * 1000
 
         return self.exchange_api.returnKlines(pair, interval, startTime, endTime)
 
