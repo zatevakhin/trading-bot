@@ -14,6 +14,7 @@ from customtypes import CurrencyPair, TradingMode
 from exchange_api import get_exchange_api
 from utils.strategy_manager import StrategyManager
 from workers.backtest_ticker import BacktestTicker
+from workers.baseworker import WorkerStatus
 from workers.live_ticker import LiveTicker
 from workers.websocket_live_ticker import WebsocketLiveTicker
 
@@ -86,8 +87,11 @@ class CandlestickItem(pg.GraphicsObject):
 
 
 class MainWindow(pg.GraphicsView):
+    keyPressed = QtCore.Signal(object)
+
     def __init__(self, args):
         super(MainWindow, self).__init__()
+        self.keyPressed.connect(self.on_key)
 
         # Configure Trader
         self.configure_trader(args)
@@ -105,6 +109,23 @@ class MainWindow(pg.GraphicsView):
         # TODO: Add proxy
         # self.proxy_switcher = ProxySwitcher(PROXY_LIST, 600)
         # self.proxy_switcher.start()
+
+    def keyPressEvent(self, event):
+        super(MainWindow, self).keyPressEvent(event)
+        self.keyPressed.emit(event)
+
+    def on_key(self, event):
+        if event.key() == QtCore.Qt.Key_Space:
+            status = self.strategy_ticker_thread.get_status()
+
+            if status == WorkerStatus.WORKING:
+                self.strategy_ticker_thread.pause()
+            else:
+                self.strategy_ticker_thread.resume()
+
+        elif event.key() == QtCore.Qt.Key_Q:
+            pass
+            # self.close()
 
     def closeEvent(self, event):
         self.strategy_ticker_thread.stop()
