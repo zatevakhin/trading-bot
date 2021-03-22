@@ -1,9 +1,9 @@
 import operator
-from enum import Enum, auto
 
 import numpy as np
 import pandas as pd
 import talib
+from basetypes.trend_direction import TrendDirection
 from chart import Chart
 from customtypes import CurrencyPair, TradingMode
 from termcolor import colored
@@ -13,12 +13,6 @@ from utils.trand_indicators import *
 from strategies.strategybase import StrategyBase
 
 MIN_TREND_LINE_LENGTH = 3
-
-
-class TrendState(Enum):
-    UNDEFINED = auto()
-    UPTREND = auto()
-    DOWNTREND = auto()
 
 
 class Strategy(StrategyBase):
@@ -39,7 +33,7 @@ class Strategy(StrategyBase):
         self.n_downtrend = MIN_TREND_LINE_LENGTH
         self.n_uptrend = MIN_TREND_LINE_LENGTH
 
-        self.PREVIOUS_TREND = TrendState.UNDEFINED
+        self.PREVIOUS_TREND = TrendDirection.FLAT
 
     def preload(self, candle_list):
         self.chart.reset(candle_list)
@@ -75,33 +69,6 @@ class Strategy(StrategyBase):
 
         RSI = curr_row["RSI"]
 
-        DI_P = curr_row["DI+"]
-        DI_M = curr_row["DI-"]
-        ADX = curr_row["ADX"]
-
-        EMA50 = curr_row["EMA50"]
-        EMA200 = curr_row["EMA200"]
-
-        P_EMA50 = prev_row["EMA50"]
-        P_EMA200 = prev_row["EMA200"]
-
-        EMA_50_200_DEAD_CROSS = EMA200 > EMA50
-        EMA_50_200_GOLDEN_CROSS = EMA50 > EMA200
-
-        EMA200_FALLING = check_frame_trend(df, 5, "EMA200", operator.ge)
-        EMA50_FALLING = check_frame_trend(df, 3, "EMA50", operator.ge)
-        EMA50_RISING = check_frame_trend(df, 2, "EMA50", operator.le)
-
-        RSI_RISING = check_frame_trend(df, 2, "RSI", operator.ge)
-
-        price_lower_that_ema_200 = EMA200 > self.currentPrice
-        price_upper_that_ema_200 = EMA200 < self.currentPrice
-        price_lower_that_ema_50 = EMA50 > self.currentPrice
-        price_upper_that_ema_50 = EMA50 < self.currentPrice
-
-        prev_ema_50_200_diff = abs(P_EMA50 - P_EMA200)
-        curr_ema_50_200_diff = abs(EMA50 - EMA200)
-
         can_open_new_trade = len(open_trades) < self.max_num_trades
 
         trade = Trade(self.pair, self.budget, self.mode, self.exchange, 5.0)
@@ -112,10 +79,10 @@ class Strategy(StrategyBase):
         p_uptrend = get_trend_aproximation(df, self.n_uptrend, indicator_y_uptrend)
         p_downtrend = get_trend_aproximation(df, self.n_downtrend, indicator_y_downtrend)
 
-        UP_TREND = stupid_check_uptrend(df, p_uptrend, aggresive=False)
-        DOWN_TREND = stupid_check_downtrend(df, p_downtrend, aggresive=False)
+        UP_TREND = stupid_check_uptrend(df, p_uptrend)
+        DOWN_TREND = stupid_check_downtrend(df, p_downtrend)
 
-        TREND_STATE = TrendState.UNDEFINED
+        TREND_STATE = TrendDirection.FLAT
 
         if UP_TREND == DOWN_TREND:
             self.n_uptrend = MIN_TREND_LINE_LENGTH
@@ -125,16 +92,16 @@ class Strategy(StrategyBase):
         current_n_downtrend = [MIN_TREND_LINE_LENGTH, self.n_downtrend + 1][DOWN_TREND]
 
         if UP_TREND and current_n_uptrend > self.n_uptrend:
-            TREND_STATE = TrendState.UPTREND
+            TREND_STATE = TrendDirection.UPTREND
 
         if DOWN_TREND and current_n_downtrend > self.n_downtrend:
-            TREND_STATE = TrendState.DOWNTREND
+            TREND_STATE = TrendDirection.DOWNTREND
 
         print(self.PREVIOUS_TREND, TREND_STATE)
 
         if can_open_new_trade:
-            if TREND_STATE in [TrendState.UPTREND, TrendState.UNDEFINED]:
-                if self.PREVIOUS_TREND in [TrendState.DOWNTREND]:
+            if TREND_STATE in [TrendDirection.UPTREND, TrendDirection.FLAT]:
+                if self.PREVIOUS_TREND in [TrendDirection.DOWNTREND]:
                     # if current_n_downtrend == MIN_TREND_LINE_LENGTH:
                     if RSI <= 50:
                         if trade.open(candle):
@@ -142,14 +109,14 @@ class Strategy(StrategyBase):
 
         #--------------------------
 
-        if TREND_STATE in [TrendState.DOWNTREND, TrendState.UNDEFINED]:
-            if self.PREVIOUS_TREND in [TrendState.UPTREND]:
+        if TREND_STATE in [TrendDirection.DOWNTREND, TrendDirection.FLAT]:
+            if self.PREVIOUS_TREND in [TrendDirection.UPTREND]:
                 for trade in open_trades:
                     if abs(trade.profit(candle)) >= 0.5:
                         trade.close(candle)
 
         #--------------------------
-        if TREND_STATE == TrendState.UNDEFINED:
+        if TREND_STATE == TrendDirection.FLAT:
             for trade in open_trades:
                 trade.set_prop_limit(candle, 0.6)
 
