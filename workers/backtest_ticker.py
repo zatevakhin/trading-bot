@@ -11,13 +11,26 @@ class BacktestTicker(Worker):
         self.status = WorkerStatus.WORKING
         self.tick = window.backtest_tick
 
+    def get_status(self):
+        return self.status
+
     def stop(self):
         self.status = WorkerStatus.STOPPED
+
+    def pause(self):
+        self.status = WorkerStatus.PAUSED
+
+    def resume(self):
+        self.status = WorkerStatus.WORKING
 
     def run(self):
         candle = None
 
         for candle in self.candles:
+
+            while self.status in [WorkerStatus.PAUSED]:
+                time.sleep(self.tick)
+
             self.window.chart_tick(candle)
 
             if self.status not in [WorkerStatus.WORKING]:
