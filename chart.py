@@ -26,5 +26,8 @@ class Chart(object):
     def get_candles(self):
         return self.data
 
+    def get_last_candle(self):
+        return self.data[-1]
+
     def getCurrentPrice(self):
         return self.exchange.returnTicker(self.pair)

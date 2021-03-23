@@ -1,6 +1,5 @@
 import time
 
-import userconfig
 from basetypes.exchange import Exchange
 from customtypes import CandleTimeInterval, TradingMode
 
