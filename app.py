@@ -3,7 +3,6 @@ import sys
 import time
 from datetime import datetime
 
-import numpy as np
 import pyqtgraph as pg
 from PyQt5 import QtWidgets
 from pyqtgraph import QtCore, QtGui
@@ -126,6 +125,9 @@ class MainWindow(pg.GraphicsView):
         elif event.key() == QtCore.Qt.Key_Q:
             pass
             # self.close()
+        elif event.key() == QtCore.Qt.Key_T:
+            self.strategy.show_positions()
+            # self.close()
 
     def closeEvent(self, event):
         self.strategy_ticker_thread.stop()
@@ -161,7 +163,7 @@ class MainWindow(pg.GraphicsView):
         if not budget and self.mode in [TradingMode.LIVE]:
             raise ValueError("Budget should be more that '0' for live trading.")
 
-        self.strategy = strategy(self.mode, budget, self.chart, self.exchange)
+        self.strategy = strategy(self.chart, self.exchange, self.mode, budget)
 
         self.strategy_ticker_thread = None
 
@@ -194,40 +196,40 @@ class MainWindow(pg.GraphicsView):
             end = self.start_end
 
         candles = self.exchange.returnChartData(self.pair, self.period, start, end)
-
-        self.chart.reset(candles[:self.preload])
-        self.strategy.preload(self.chart.get_candles())
+        self.strategy.on_preload(candles, self.preload)
 
         candles = candles[self.preload:]
 
-        df = self.strategy.get_indicators()
+        indicators: 'Indicators' = self.strategy.get_indicators()
 
-        TIMEDATA = list(map(lambda i: i.astype(int) * 1e-9, np.array(df["Timestamp"])))
-        OPEN = np.array(df["Open"])
-        CLOSE = np.array(df["Close"])
-        HIGH = np.array(df["High"])
-        LOW = np.array(df["Low"])
-        EMA50 = np.array(df["EMA50"])
-        EMA200 = np.array(df["EMA200"])
-        RSI = np.array(df["RSI"])
-        ADX = np.array(df["ADX"])
-        DI_P = np.array(df["DI+"])
-        DI_M = np.array(df["DI-"])
+        datetime_list = indicators.datetime_array
+        open_price_list = indicators.open_array
+        close_price_list = indicators.close_array
+        high_price_list = indicators.high_array
+        low_price_list = indicators.low_array
+        ema50_list = indicators.ema50_array
+        ema200_list = indicators.ema200_array
+        rsi_list = indicators.rsi_array
+        adx_list = indicators.adx_array
+        di_plus_list = indicators.di_plus_array
+        di_minus_list = indicators.di_minus_array
 
-        d = list(zip(TIMEDATA, OPEN, CLOSE, LOW, HIGH))
+        d = list(zip(datetime_list, open_price_list, close_price_list, low_price_list, high_price_list))
 
         self.candle_bars = CandlestickItem(d)
 
         self.candlesticks = self.plot_price.plot()
         self.plot_price.addItem(self.candle_bars)
-        self.plot_price.setYRange(min(LOW), max(HIGH))
+        self.plot_price.setYRange(min(low_price_list), max(high_price_list))
+        self.plot_price.setXRange(min(datetime_list), max(datetime_list))
 
-        self.curve_ema50 = self.plot_price.plot(TIMEDATA, EMA50)
-        self.curve_ema200 = self.plot_price.plot(TIMEDATA, EMA200)
-        self.curve_rsi = self.plot_rsi.plot(TIMEDATA, RSI)
-        self.curve_adx = self.plot_dmi.plot(TIMEDATA, ADX)
-        self.curve_di_p = self.plot_dmi.plot(TIMEDATA, DI_P)
-        self.curve_di_m = self.plot_dmi.plot(TIMEDATA, DI_M)
+        self.curve_ema50 = self.plot_price.plot(datetime_list, ema50_list)
+        self.curve_ema200 = self.plot_price.plot(datetime_list, ema200_list)
+
+        self.curve_rsi = self.plot_rsi.plot(datetime_list, rsi_list)
+        self.curve_adx = self.plot_dmi.plot(datetime_list, adx_list)
+        self.curve_di_p = self.plot_dmi.plot(datetime_list, di_plus_list)
+        self.curve_di_m = self.plot_dmi.plot(datetime_list, di_minus_list)
 
         self.scatter_buy = pg.ScatterPlotItem(size=15, brush=pg.mkBrush(0, 0, 255, 255), pen=pg.mkPen('y'), symbol='t1')
         self.scatter_sell = pg.ScatterPlotItem(size=15, brush=pg.mkBrush(255, 0, 0, 255), pen=pg.mkPen('y'), symbol='t')
@@ -261,8 +263,8 @@ class MainWindow(pg.GraphicsView):
     def chart_tick(self, candle):
         p_uptrend, p_downtrend = self.strategy.on_tick(candle)
 
-        # TODO: move to separate method
-        for trade in self.strategy.trades:
+        # # TODO: move to separate method
+        for trade in self.strategy.get_trades():
             if trade.open_candle:
                 self.open_trades_candles.append({
                     'pos': [trade.open_candle.timestamp, trade.open_candle.close],
@@ -275,35 +277,35 @@ class MainWindow(pg.GraphicsView):
                     'data': 1
                 })
 
-        df = self.strategy.get_indicators()
+        indicators: 'Indicators' = self.strategy.get_indicators()
 
-        TIMEDATA = list(map(lambda i: i.astype(int) * 1e-9, np.array(df["Timestamp"])))
-        OPEN = np.array(df["Open"])
-        CLOSE = np.array(df["Close"])
-        HIGH = np.array(df["High"])
-        LOW = np.array(df["Low"])
-        EMA50 = np.array(df["EMA50"])
-        EMA200 = np.array(df["EMA200"])
-        RSI = np.array(df["RSI"])
-        ADX = np.array(df["ADX"])
-        DI_P = np.array(df["DI+"])
-        DI_M = np.array(df["DI-"])
+        datetime_list = indicators.datetime_array
+        open_price_list = indicators.open_array
+        close_price_list = indicators.close_array
+        high_price_list = indicators.high_array
+        low_price_list = indicators.low_array
+        ema50_list = indicators.ema50_array
+        ema200_list = indicators.ema200_array
+        rsi_list = indicators.rsi_array
+        adx_list = indicators.adx_array
+        di_plus_list = indicators.di_plus_array
+        di_minus_list = indicators.di_minus_array
 
-        d = list(zip(TIMEDATA, OPEN, CLOSE, LOW, HIGH))
+        d = list(zip(datetime_list, open_price_list, close_price_list, low_price_list, high_price_list))
         self.candle_bars.setData(d)
 
-        self.curve_ema50.setData(TIMEDATA, EMA50)
-        self.curve_ema200.setData(TIMEDATA, EMA200)
-        self.curve_rsi.setData(TIMEDATA, RSI)
-        self.curve_adx.setData(TIMEDATA, ADX)
-        self.curve_di_p.setData(TIMEDATA, DI_P)
-        self.curve_di_m.setData(TIMEDATA, DI_M)
+        self.curve_ema50.setData(datetime_list, ema50_list)
+        self.curve_ema200.setData(datetime_list, ema200_list)
+        self.curve_rsi.setData(datetime_list, rsi_list)
+        self.curve_adx.setData(datetime_list, adx_list)
+        self.curve_di_p.setData(datetime_list, di_plus_list)
+        self.curve_di_m.setData(datetime_list, di_minus_list)
 
         self.scatter_sell.setData(spots=self.close_trades_candles)
         self.scatter_buy.setData(spots=self.open_trades_candles)
 
-        t_downtrend = list(TIMEDATA[-len(p_downtrend):])
-        t_uptrend = list(TIMEDATA[-len(p_uptrend):])
+        t_downtrend = list(datetime_list[-len(p_downtrend):])
+        t_uptrend = list(datetime_list[-len(p_uptrend):])
 
         self.curve_downtrend.setData(t_downtrend, p_downtrend)
         self.curve_uptrend.setData(t_uptrend, p_uptrend)
