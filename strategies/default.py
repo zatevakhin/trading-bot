@@ -17,7 +17,7 @@ class Strategy(StrategyBase):
         self.num_candles_uptrend = MIN_TREND_LINE_LENGTH
         self.previous_trend = TrendDirection.FLAT
 
-    def tick(self):
+    def tick(self) -> dict:
         candle = self.get_current_candle()
 
         current_rsi = self.indicators.rsi_array[-1]
@@ -59,4 +59,4 @@ class Strategy(StrategyBase):
         self.num_candles_downtrend = current_n_downtrend
         self.previous_trend = trend_direction
 
-        return aprox_uptrend, aprox_downtrend
+        return {"uptrend": aprox_uptrend, "downtrend": aprox_downtrend}

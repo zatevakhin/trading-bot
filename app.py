@@ -174,17 +174,21 @@ class MainWindow(pg.GraphicsView):
         date_axis1 = TimeAxisItem(orientation='bottom')
         date_axis2 = TimeAxisItem(orientation='bottom')
         date_axis3 = TimeAxisItem(orientation='bottom')
+        date_axis4 = TimeAxisItem(orientation='bottom')
 
         self.plot_price = self.layout.addPlot(0, 0, title='Price with EMA 50,200', axisItems={'bottom': date_axis1})
         self.plot_rsi = self.layout.addPlot(1, 0, title='RSI', axisItems={'bottom': date_axis2})
         self.plot_dmi = self.layout.addPlot(2, 0, title='DMI', axisItems={'bottom': date_axis3})
+        self.plot_scalp = self.layout.addPlot(3, 0, title='Scalping', axisItems={'bottom': date_axis4})
 
         self.plot_price.setXLink(self.plot_rsi)
         self.plot_rsi.setXLink(self.plot_dmi)
+        self.plot_dmi.setXLink(self.plot_scalp)
 
         self.plot_price.showGrid(x=True, y=True, alpha=0.3)
         self.plot_rsi.showGrid(x=True, y=True, alpha=0.3)
         self.plot_dmi.showGrid(x=True, y=True, alpha=0.3)
+        self.plot_scalp.showGrid(x=True, y=True, alpha=0.3)
 
     def main(self):
         interval = util.interval_mapper_to_seconds(self.period)
@@ -239,9 +243,11 @@ class MainWindow(pg.GraphicsView):
 
         self.curve_downtrend = self.plot_price.plot()
         self.curve_uptrend = self.plot_price.plot()
-
         self.curve_downtrend.setPen(pg.mkPen(color=(255, 0, 0), width=3))
         self.curve_uptrend.setPen(pg.mkPen(color=(0, 0, 255), width=3))
+
+        self.curve_scalping_line = self.plot_scalp.plot()
+        # self.curve_scalping_line.setPen(pg.mkPen(color=(180, 120, 40), width=2))
 
         self.curve_ema50.setPen(pg.mkPen(color=(180, 120, 40), width=2))
         self.curve_ema200.setPen(pg.mkPen(color=(40, 150, 40), width=2))
@@ -261,7 +267,7 @@ class MainWindow(pg.GraphicsView):
         self.strategy_ticker_thread.start()
 
     def chart_tick(self, candle):
-        p_uptrend, p_downtrend = self.strategy.on_tick(candle)
+        ret_data = self.strategy.on_tick(candle)
 
         # # TODO: move to separate method
         for trade in self.strategy.get_trades():
@@ -304,11 +310,24 @@ class MainWindow(pg.GraphicsView):
         self.scatter_sell.setData(spots=self.close_trades_candles)
         self.scatter_buy.setData(spots=self.open_trades_candles)
 
-        t_downtrend = list(datetime_list[-len(p_downtrend):])
-        t_uptrend = list(datetime_list[-len(p_uptrend):])
+        if 'uptrend' in ret_data:
+            uptrend = ret_data.get('uptrend')
+            t_uptrend = list(datetime_list[-len(uptrend):])
+            self.curve_uptrend.setData(t_uptrend, uptrend)
 
-        self.curve_downtrend.setData(t_downtrend, p_downtrend)
-        self.curve_uptrend.setData(t_uptrend, p_uptrend)
+        if 'downtrend' in ret_data:
+            downtrend = ret_data.get('downtrend')
+            t_downtrend = list(datetime_list[-len(downtrend):])
+            self.curve_downtrend.setData(t_downtrend, downtrend)
+
+        if 'scalping-line' in ret_data:
+            scalping_line = ret_data.get('scalping-line')
+            t_scalping_line = list(datetime_list[-len(scalping_line):])
+            self.curve_scalping_line.setData(t_scalping_line, scalping_line)
+        else:
+            if self.plot_scalp:
+                self.layout.removeItem(self.plot_scalp)
+                self.plot_scalp = None
 
 
 if __name__ == "__main__":
