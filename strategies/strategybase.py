@@ -35,7 +35,7 @@ class StrategyBase(ABC):
         self.indicators.high_array = candles
         self.indicators.low_array = candles
 
-    def on_tick(self, candle: 'Candle'):
+    def on_tick(self, candle: 'Candle') -> dict:
         self.chart.add(candle)
 
         candles = self.chart.get_candles()
@@ -46,14 +46,14 @@ class StrategyBase(ABC):
         self.indicators.high_array = candles
         self.indicators.low_array = candles
 
-        uptrend, donwtrend = self.tick()
+        ret: dict = self.tick()
 
         self.update_open_trades()
 
-        return uptrend, donwtrend
+        return ret
 
     @abstractmethod
-    def tick(self):
+    def tick(self) -> dict:
         raise NotImplementedError
 
     def get_current_candle(self) -> 'Candle':
@@ -78,7 +78,7 @@ class StrategyBase(ABC):
         open_trades = self.get_trades(open_only=True)
 
         for trade in open_trades:
-            if abs(trade.profit(candle)) >= 0.5:
+            if abs(trade.profit(candle)) >= 0.1:
                 trade.close(candle)
 
     def get_trades(self, open_only=False) -> list['Trade']:

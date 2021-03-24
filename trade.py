@@ -64,6 +64,7 @@ class Trade(object):
             print(order)
 
             self.exchange_order = order
+            self.entry_price = order.price
 
         print("Trade", colored("opened", 'green'))
 
@@ -88,10 +89,13 @@ class Trade(object):
 
             print(order)
 
+            self.exit_price = order.price
+        else:
+            self.exit_price = float(candle.average)
+
         print("Trade", colored("closed", 'red'))
 
         self.close_candle = candle
-        self.exit_price = float(candle.average)
         self.status = TradeStatus.CLOSED
 
     def tick(self, candle):
