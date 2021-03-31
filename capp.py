@@ -42,7 +42,7 @@ class Application:
         if not budget and self.mode in [TradingMode.LIVE]:
             raise ValueError("Budget should be more that '0' for live trading.")
 
-        self.strategy = strategy(self.mode, budget, self.chart, self.exchange)
+        self.strategy = strategy(self.chart, self.exchange, self.mode, budget)
 
         self.strategy_ticker_thread = None
 
@@ -56,9 +56,7 @@ class Application:
             end = self.start_end
 
         candles = self.exchange.returnChartData(self.pair, self.period, start, end)
-
-        self.chart.reset(candles[:self.preload])
-        self.strategy.preload(self.chart.get_candles())
+        self.strategy.on_preload(candles, self.preload)
 
         candles = candles[self.preload:]
 
@@ -74,6 +72,20 @@ class Application:
             for _ in range(self.tick):
                 try:
                     time.sleep(1)
+
+                    i = input(colored(">>> ", 'yellow'))
+
+                    if i in ["t", "T"]:
+                        self.strategy.show_positions()
+                    elif i in ["q", "Q"]:
+                        raise KeyboardInterrupt
+                    elif i in ["o", "O"]:
+                        self.strategy.open_trade(stop_loss_percent=1)
+                    elif i in ["c", "C"]:
+                        self.strategy.close_trade()
+                    else:
+                        print("Unhandled input: ", i)
+
                 except KeyboardInterrupt:
                     loop = False
                     break
@@ -84,7 +96,7 @@ class Application:
         print(colored(">>>", 'red'), "Exit.")
 
     def chart_tick(self, candle):
-        _, _ = self.strategy.on_tick(candle)
+        _ = self.strategy.on_tick(candle)
 
 
 if __name__ == "__main__":
