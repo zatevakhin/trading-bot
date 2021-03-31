@@ -7,7 +7,7 @@ from exchange_api.customtypes import BinanceQueryError, TimeInForceStatus
 from exchange_api.exchange_api_adapter_base import ExchangeApiAdapterBase
 
 
-class Trade(object):
+class Position(object):
     def __init__(self, pair, budget, mode, exchange, stop_loss_percent):
         self.pair = pair
         self.budget = budget

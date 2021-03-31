@@ -4,7 +4,8 @@ from utils.trand_indicators import *
 
 from strategies.strategybase import StrategyBase
 
-MIN_TREND_LINE_LENGTH = 3
+MIN_UPTREND_LINE_LENGTH = 2
+MIN_DONWTREND_LINE_LENGTH = 3
 
 
 class Strategy(StrategyBase):
@@ -13,13 +14,11 @@ class Strategy(StrategyBase):
     def __init__(self, chart: 'Chart', exchange, mode, budget):
         super().__init__(chart, exchange, mode, budget)
 
-        self.num_candles_downtrend = MIN_TREND_LINE_LENGTH
-        self.num_candles_uptrend = MIN_TREND_LINE_LENGTH
+        self.num_candles_downtrend = MIN_DONWTREND_LINE_LENGTH
+        self.num_candles_uptrend = MIN_UPTREND_LINE_LENGTH
         self.previous_trend = TrendDirection.FLAT
 
     def tick(self) -> dict:
-        candle = self.get_current_candle()
-
         current_rsi = self.indicators.rsi_array[-1]
 
         aprox_uptrend = get_trend_aproximation(self.indicators.low_array, self.num_candles_uptrend)
@@ -31,11 +30,11 @@ class Strategy(StrategyBase):
         trend_direction = TrendDirection.FLAT
 
         if is_uptrend == is_downtrend:
-            self.num_candles_uptrend = MIN_TREND_LINE_LENGTH
-            self.num_candles_downtrend = MIN_TREND_LINE_LENGTH
+            self.num_candles_uptrend = MIN_UPTREND_LINE_LENGTH
+            self.num_candles_downtrend = MIN_DONWTREND_LINE_LENGTH
 
-        current_n_uptrend = [MIN_TREND_LINE_LENGTH, self.num_candles_uptrend + 1][is_uptrend]
-        current_n_downtrend = [MIN_TREND_LINE_LENGTH, self.num_candles_downtrend + 1][is_downtrend]
+        current_n_uptrend = [MIN_UPTREND_LINE_LENGTH, self.num_candles_uptrend + 1][is_uptrend]
+        current_n_downtrend = [MIN_DONWTREND_LINE_LENGTH, self.num_candles_downtrend + 1][is_downtrend]
 
         if is_uptrend and current_n_uptrend > self.num_candles_uptrend:
             trend_direction = TrendDirection.UPTREND
@@ -46,13 +45,13 @@ class Strategy(StrategyBase):
         if trend_direction in [TrendDirection.UPTREND, TrendDirection.FLAT]:
             if self.previous_trend in [TrendDirection.DOWNTREND]:
                 if current_rsi <= 50:
-                    self.open_trade(candle, stop_loss_percent=1.0)
+                    self.open_trade(stop_loss_percent=1.0)
 
         #--------------------------
 
         if trend_direction in [TrendDirection.DOWNTREND, TrendDirection.FLAT]:
             if self.previous_trend in [TrendDirection.UPTREND]:
-                self.close_trade(candle)
+                self.close_trade()
 
         #--------------------------
         self.num_candles_uptrend = current_n_uptrend
