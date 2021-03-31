@@ -1,11 +1,8 @@
 from abc import ABC, abstractmethod
 
 from basetypes.indicators import Indicators
-from customtypes import TradeStatus
+from position import Position
 from termcolor import colored
-from trade import Trade, TradeStatus
-
-MAX_SIMULTANEOUS_TRADES = 1
 
 
 class StrategyBase(ABC):
@@ -20,6 +17,7 @@ class StrategyBase(ABC):
         self.indicators = Indicators()
 
         self.trades = []
+        self.position = None
 
     def get_indicators(self):
         return self.indicators
@@ -48,7 +46,7 @@ class StrategyBase(ABC):
 
         ret: dict = self.tick()
 
-        self.update_open_trades()
+        self.update_open_position()
 
         return ret
 
@@ -59,46 +57,48 @@ class StrategyBase(ABC):
     def get_current_candle(self) -> 'Candle':
         return self.chart.get_last_candle()
 
-    def open_trade(self, candle: 'Candle', stop_loss_percent=0) -> bool:
-        trade = Trade(self.pair, self.budget, self.mode, self.exchange, stop_loss_percent)
+    def open_trade(self, stop_loss_percent=0) -> bool:
+        if self.position:
+            return False
 
-        is_trade_been_open = False
+        candle = self.get_current_candle()
 
-        num_open_trades = len(self.get_trades(open_only=True))
+        pos = Position(self.pair, self.budget, self.mode, self.exchange, stop_loss_percent)
 
-        if num_open_trades < MAX_SIMULTANEOUS_TRADES:
-            if trade.open(candle):
-                self.trades.append(trade)
+        if pos.open(candle):
+            self.position = pos
 
-                is_trade_been_open = True
+            return True
 
-        return is_trade_been_open
+        return False
 
-    def close_trade(self, candle: 'Candle'):
-        open_trades = self.get_trades(open_only=True)
+    def close_trade(self):
+        if self.position:
+            candle = self.get_current_candle()
 
-        for trade in open_trades:
-            if abs(trade.profit(candle)) >= 0.1:
-                trade.close(candle)
+            self.position.close(candle)
+            self.trades.append(self.position)
+            self.position = None
 
-    def get_trades(self, open_only=False) -> list['Trade']:
-        if open_only:
-            return list(filter(lambda x: x.status == TradeStatus.OPEN, self.trades))
-
+    def get_closed_positions(self) -> list['Position']:
         return self.trades
 
-    def update_open_trades(self):
-        open_trades = self.get_trades(open_only=True)
+    def get_open_position(self) -> 'Position':
+        return self.position
 
-        for trade in open_trades:
-            trade.tick(self.get_current_candle())
+    def update_open_position(self):
+        if self.position:
+            self.position.tick(self.get_current_candle())
+
+            if self.position.close_candle:
+                self.trades.append(self.position)
+                self.position = None
 
     def show_positions(self):
-        trades = self.get_trades()
-
         trades_profit_percent = []
 
-        for trade in trades:
+        closed_positions = self.get_closed_positions()
+        for trade in closed_positions:
             trades_profit_percent.append(trade.showTrade())
 
         trades_profit_percent = list(filter(bool, trades_profit_percent))
@@ -106,5 +106,6 @@ class StrategyBase(ABC):
         if trades_profit_percent:
             profit = sum(trades_profit_percent)
             pf = colored("{: 3.2f}%".format(profit), 'white', attrs=["bold"])
+            sf = colored("{}".format(len(closed_positions)), 'yellow')
 
-            print(f"Summary profit {pf}")
+            print(f"Closed positions: {sf}, Summary profit: {pf}")
