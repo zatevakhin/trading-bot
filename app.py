@@ -167,9 +167,6 @@ class MainWindow(pg.GraphicsView):
 
         self.strategy_ticker_thread = None
 
-        self.open_trades_candles = []
-        self.close_trades_candles = []
-
     def configure_view(self):
         date_axis1 = TimeAxisItem(orientation='bottom')
         date_axis2 = TimeAxisItem(orientation='bottom')
@@ -211,6 +208,9 @@ class MainWindow(pg.GraphicsView):
         close_price_list = indicators.close_array
         high_price_list = indicators.high_array
         low_price_list = indicators.low_array
+        ema6_list = indicators.ema6_array
+        ema12_list = indicators.ema12_array
+        ema25_list = indicators.ema25_array
         ema50_list = indicators.ema50_array
         ema200_list = indicators.ema200_array
         rsi_list = indicators.rsi_array
@@ -227,6 +227,9 @@ class MainWindow(pg.GraphicsView):
         self.plot_price.setYRange(min(low_price_list), max(high_price_list))
         self.plot_price.setXRange(min(datetime_list), max(datetime_list))
 
+        self.curve_ema6 = self.plot_price.plot(datetime_list, ema6_list)
+        self.curve_ema12 = self.plot_price.plot(datetime_list, ema12_list)
+        self.curve_ema25 = self.plot_price.plot(datetime_list, ema25_list)
         self.curve_ema50 = self.plot_price.plot(datetime_list, ema50_list)
         self.curve_ema200 = self.plot_price.plot(datetime_list, ema200_list)
 
@@ -249,6 +252,9 @@ class MainWindow(pg.GraphicsView):
         self.curve_scalping_line = self.plot_scalp.plot()
         # self.curve_scalping_line.setPen(pg.mkPen(color=(180, 120, 40), width=2))
 
+        self.curve_ema6.setPen(pg.mkPen(color=(255, 0, 255), width=2))
+        self.curve_ema12.setPen(pg.mkPen(color=(180, 0, 180), width=2))
+        self.curve_ema25.setPen(pg.mkPen(color=(180, 0, 80), width=2))
         self.curve_ema50.setPen(pg.mkPen(color=(180, 120, 40), width=2))
         self.curve_ema200.setPen(pg.mkPen(color=(40, 150, 40), width=2))
         self.curve_rsi.setPen(pg.mkPen(color=(40, 40, 200), width=1))
@@ -270,15 +276,19 @@ class MainWindow(pg.GraphicsView):
         ret_data = self.strategy.on_tick(candle)
 
         # # TODO: move to separate method
-        for trade in self.strategy.get_trades():
-            if trade.open_candle:
-                self.open_trades_candles.append({
-                    'pos': [trade.open_candle.timestamp, trade.open_candle.close],
-                    'data': 1
-                })
 
-            if trade.close_candle:
-                self.close_trades_candles.append({
+        open_trades_candles = []
+        close_trades_candles = []
+
+        closed_positions = self.strategy.get_closed_positions()
+        open_position = self.strategy.get_open_position()
+
+        for trade in [*closed_positions, open_position]:
+            if trade and trade.open_candle:
+                open_trades_candles.append({'pos': [trade.open_candle.timestamp, trade.open_candle.close], 'data': 1})
+
+            if trade and trade.close_candle:
+                close_trades_candles.append({
                     'pos': [trade.close_candle.timestamp, trade.close_candle.close],
                     'data': 1
                 })
@@ -290,6 +300,9 @@ class MainWindow(pg.GraphicsView):
         close_price_list = indicators.close_array
         high_price_list = indicators.high_array
         low_price_list = indicators.low_array
+        ema6_list = indicators.ema6_array
+        ema12_list = indicators.ema12_array
+        ema25_list = indicators.ema25_array
         ema50_list = indicators.ema50_array
         ema200_list = indicators.ema200_array
         rsi_list = indicators.rsi_array
@@ -300,6 +313,9 @@ class MainWindow(pg.GraphicsView):
         d = list(zip(datetime_list, open_price_list, close_price_list, low_price_list, high_price_list))
         self.candle_bars.setData(d)
 
+        self.curve_ema6.setData(datetime_list, ema6_list)
+        self.curve_ema12.setData(datetime_list, ema12_list)
+        self.curve_ema25.setData(datetime_list, ema25_list)
         self.curve_ema50.setData(datetime_list, ema50_list)
         self.curve_ema200.setData(datetime_list, ema200_list)
         self.curve_rsi.setData(datetime_list, rsi_list)
@@ -307,8 +323,8 @@ class MainWindow(pg.GraphicsView):
         self.curve_di_p.setData(datetime_list, di_plus_list)
         self.curve_di_m.setData(datetime_list, di_minus_list)
 
-        self.scatter_sell.setData(spots=self.close_trades_candles)
-        self.scatter_buy.setData(spots=self.open_trades_candles)
+        self.scatter_sell.setData(spots=close_trades_candles)
+        self.scatter_buy.setData(spots=open_trades_candles)
 
         if 'uptrend' in ret_data:
             uptrend = ret_data.get('uptrend')
