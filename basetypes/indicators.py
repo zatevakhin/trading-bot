@@ -11,6 +11,9 @@ class Indicators:
         self.datetime = np.array([])
         self.ema200 = np.array([])
         self.ema50 = np.array([])
+        self.ema25 = np.array([])
+        self.ema12 = np.array([])
+        self.ema6 = np.array([])
         self.rsi = np.array([])
         self.adx = np.array([])
         self.di_plus = np.array([])
@@ -75,6 +78,36 @@ class Indicators:
             self.ema50 = ta.EMA(self.close, timeperiod=50)
 
         return self.ema50
+
+    @property
+    def ema25_array(self) -> np.array:
+        if not self.close.size:
+            raise ValueError("Set first close prices array!")
+
+        if self.ema25.size != self.close.size:
+            self.ema25 = ta.EMA(self.close, timeperiod=25)
+
+        return self.ema25
+
+    @property
+    def ema12_array(self) -> np.array:
+        if not self.close.size:
+            raise ValueError("Set first close prices array!")
+
+        if self.ema12.size != self.close.size:
+            self.ema12 = ta.EMA(self.close, timeperiod=12)
+
+        return self.ema12
+
+    @property
+    def ema6_array(self) -> np.array:
+        if not self.close.size:
+            raise ValueError("Set first close prices array!")
+
+        if self.ema6.size != self.close.size:
+            self.ema6 = ta.EMA(self.close, timeperiod=6)
+
+        return self.ema6
 
     @property
     def rsi_array(self) -> np.array:
