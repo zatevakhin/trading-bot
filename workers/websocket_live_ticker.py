@@ -1,18 +1,15 @@
 import json
-import time
 
-import util
-from basetypes.exchange import Exchange
 from candle import Candle
 from websocket import WebSocketApp
 
-from .baseworker import Worker, WorkerStatus
+from .baseworker import Worker
 
 BINANCE_WEBSOCKET = 'wss://stream.binance.com:9443/ws/'
 
 
 class WebsocketLiveTicker(Worker):
-    def __init__(self, app):
+    def __init__(self, app, last_candle=None):
         Worker.__init__(self, name="websocket-live-ticker")
         self.app = app
         self.period = app.period
@@ -20,12 +17,13 @@ class WebsocketLiveTicker(Worker):
         self.chart = app.chart
         self.tick = app.tick
         self.wsapp: 'WebSocketApp' = None
-        self.candle: 'Candle' = None
+        self.candle: 'Candle' = last_candle
 
     def stop(self):
         self.wsapp.close()
 
     def run(self):
+        print("Started: WebsocketLiveTicker")
         buy = str(self.pair.buy).lower()
         sell = str(self.pair.sell).lower()
 
@@ -45,8 +43,6 @@ class WebsocketLiveTicker(Worker):
 
     def on_message(self, data):
         if not self.candle:
-            # prev_candle = self.chart.get_candles()[-1]
-            # self.candle = Candle(interval=self.period, timestamp=prev_candle.timetamp)
             self.candle = Candle(interval=self.period)
 
         last_price = float(data.get("c"))

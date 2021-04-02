@@ -196,7 +196,7 @@ class MainWindow(pg.GraphicsView):
             start = self.start_time - (interval * self.preload)
             end = self.start_end
 
-        candles = self.exchange.returnChartData(self.pair, self.period, start, end)
+        candles, last_candle = self.exchange.returnChartData(self.pair, self.period, start, end)
         self.strategy.on_preload(candles, self.preload)
 
         candles = candles[self.preload:]
@@ -264,9 +264,9 @@ class MainWindow(pg.GraphicsView):
 
         if self.mode in [TradingMode.LIVE, TradingMode.LIVE_TEST]:
             if self.websocket:
-                self.strategy_ticker_thread = WebsocketLiveTicker(self)
+                self.strategy_ticker_thread = WebsocketLiveTicker(self, last_candle)
             else:
-                self.strategy_ticker_thread = LiveTicker(self)
+                self.strategy_ticker_thread = LiveTicker(self, last_candle)
         else:
             self.strategy_ticker_thread = BacktestTicker(self, candles)
 

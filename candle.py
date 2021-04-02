@@ -15,8 +15,7 @@ class Candle(object):
         self.average = float(average or 0)
 
         timestamp_local = calendar.timegm(datetime.utcnow().utctimetuple())
-        timestamp_local = timestamp_local - (timestamp_local % 60)
-
+        timestamp_local = timestamp_local - (timestamp_local % self.interval)
         self.timestamp = int(timestamp or timestamp_local)
 
         if not self.average:
