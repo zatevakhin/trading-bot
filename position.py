@@ -32,7 +32,7 @@ class Position(object):
         new_prop_limit = (candle.low / 100) * percent
 
         if new_prop_limit > self.prop_limit:
-            print(f">>> Prop limit updated: {self.prop_limit} -> {new_prop_limit}")
+            print(">>> Prop limit updated: {:0.8f} -> {:0.8f}".format(self.prop_limit, new_prop_limit))
             self.prop_limit = new_prop_limit
             self.prop_limit_price = candle.average
 
@@ -55,7 +55,7 @@ class Position(object):
                     order = self.exchange.buyMarketPrice(self.pair, amount)
 
             except BinanceQueryError as e:
-                print(e)
+                print("buy", e)
                 return
 
             if not order.is_status(OrderStatus.FILLED):
@@ -81,7 +81,7 @@ class Position(object):
                     order = self.exchange.sellMarketPrice(self.pair, quantity)
 
             except BinanceQueryError as e:
-                print(e)
+                print("sell", e)
                 return
 
             if not order.is_status(OrderStatus.FILLED):

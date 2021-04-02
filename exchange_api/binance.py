@@ -5,6 +5,7 @@ import time
 from urllib.parse import urlencode, urljoin
 
 import requests
+import util
 from candle import Candle
 
 from exchange_api.customtypes import BinanceFilterError, BinanceQueryError
@@ -77,13 +78,20 @@ class Binance:
             close_time = int(received_klines[len(received_klines) - 1][6])  # 6 - close time
             start_from = close_time
 
+        candle_interval = util.interval_mapper(interval)
         candles = []
-        for kline in received_klines:
-            (o_time, o, h, l, c, v, c_time, *x) = kline
+        for kline in received_klines[:-1]:
+            (o_time, o, h, l, c, *x) = kline
             candles.append(
-                Candle(interval, timestamp=o_time / 1000, opn=float(o), close=float(c), high=float(h), low=float(l)))
+                Candle(candle_interval,
+                       timestamp=o_time / 1000,
+                       opn=float(o),
+                       close=float(c),
+                       high=float(h),
+                       low=float(l)))
 
-        return candles
+        (o_time, o, h, l, c, *x) = received_klines[-1]
+        return candles, Candle(candle_interval, timestamp=o_time / 1000, opn=float(o), high=float(h), low=float(l))
 
     def createBuyOrder(self, symbol: str, price: int, quantity: float, timeInForce: str) -> 'Order':
         passed_price_filter, price = binance_filters.get_price_filter(symbol, self.exchange_info, price)
