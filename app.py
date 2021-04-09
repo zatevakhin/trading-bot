@@ -163,7 +163,8 @@ class MainWindow(pg.GraphicsView):
         if not budget and self.mode in [TradingMode.LIVE]:
             raise ValueError("Budget should be more that '0' for live trading.")
 
-        self.strategy = strategy(self.chart, self.exchange, self.mode, budget)
+        strategy_args = util.parse_strategy_args(args.strategy_args)
+        self.strategy = strategy(strategy_args, self.chart, self.exchange, self.mode, budget)
 
         self.strategy_ticker_thread = None
 
@@ -213,6 +214,7 @@ class MainWindow(pg.GraphicsView):
         ema25_list = indicators.ema25_array
         ema50_list = indicators.ema50_array
         ema200_list = indicators.ema200_array
+        psar_list = indicators.psar_array
         rsi_list = indicators.rsi_array
         adx_list = indicators.adx_array
         di_plus_list = indicators.di_plus_array
@@ -232,6 +234,7 @@ class MainWindow(pg.GraphicsView):
         self.curve_ema25 = self.plot_price.plot(datetime_list, ema25_list)
         self.curve_ema50 = self.plot_price.plot(datetime_list, ema50_list)
         self.curve_ema200 = self.plot_price.plot(datetime_list, ema200_list)
+        self.curve_psar = self.plot_price.plot(datetime_list, psar_list)
 
         self.curve_rsi = self.plot_rsi.plot(datetime_list, rsi_list)
         self.curve_adx = self.plot_dmi.plot(datetime_list, adx_list)
@@ -250,7 +253,6 @@ class MainWindow(pg.GraphicsView):
         self.curve_uptrend.setPen(pg.mkPen(color=(0, 0, 255), width=3))
 
         self.curve_scalping_line = self.plot_scalp.plot()
-        # self.curve_scalping_line.setPen(pg.mkPen(color=(180, 120, 40), width=2))
 
         self.curve_ema6.setPen(pg.mkPen(color=(255, 0, 255), width=2))
         self.curve_ema12.setPen(pg.mkPen(color=(180, 0, 180), width=2))
@@ -305,6 +307,7 @@ class MainWindow(pg.GraphicsView):
         ema25_list = indicators.ema25_array
         ema50_list = indicators.ema50_array
         ema200_list = indicators.ema200_array
+        psar_list = indicators.psar_array
         rsi_list = indicators.rsi_array
         adx_list = indicators.adx_array
         di_plus_list = indicators.di_plus_array
@@ -318,6 +321,7 @@ class MainWindow(pg.GraphicsView):
         self.curve_ema25.setData(datetime_list, ema25_list)
         self.curve_ema50.setData(datetime_list, ema50_list)
         self.curve_ema200.setData(datetime_list, ema200_list)
+        self.curve_psar.setData(datetime_list, psar_list)
         self.curve_rsi.setData(datetime_list, rsi_list)
         self.curve_adx.setData(datetime_list, adx_list)
         self.curve_di_p.setData(datetime_list, di_plus_list)
@@ -368,9 +372,9 @@ if __name__ == "__main__":
 
     p.add_argument('--exchange', '-e', default=None, help=f"Exchange used for trading.")
     p.add_argument('--strategy', '-s', default='default', help=f"Trading strategy.")
+    p.add_argument('--strategy-args', '-a', default=None, help=f"Trading strategy arguments. ex. 'a=1;b=2'")
 
     p.add_argument('--list-exchanges', default=None, help=f"Show available exchanges.")
-    p.add_argument('--list-strategies', default=None, help=f"Show available strategies.")
 
     app = QtWidgets.QApplication(sys.argv)
     w = MainWindow(p.parse_args())

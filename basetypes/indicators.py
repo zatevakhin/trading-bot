@@ -9,6 +9,7 @@ class Indicators:
         self.high = np.array([])
         self.low = np.array([])
         self.datetime = np.array([])
+        self.psar = np.array([])
         self.ema200 = np.array([])
         self.ema50 = np.array([])
         self.ema25 = np.array([])
@@ -68,6 +69,19 @@ class Indicators:
             self.ema200 = ta.EMA(self.close, timeperiod=200)
 
         return self.ema200
+
+    @property
+    def psar_array(self) -> np.array:
+        if not self.high.size:
+            raise ValueError("Set first high prices array!")
+
+        if not self.low.size:
+            raise ValueError("Set first low prices array!")
+
+        if self.psar.size != self.close.size:
+            self.psar = ta.SAR(self.high, self.low, acceleration=0.02, maximum=0.2)
+
+        return self.psar
 
     @property
     def ema50_array(self) -> np.array:

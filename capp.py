@@ -10,6 +10,7 @@ from exchange_api import get_exchange_api
 from utils.strategy_manager import StrategyManager
 from workers.backtest_ticker import BacktestTicker
 from workers.live_ticker import LiveTicker
+from workers.websocket_live_ticker import WebsocketLiveTicker
 
 
 class Application:
@@ -27,6 +28,7 @@ class Application:
         self.backtest_tick = float(args.tick_b)
         self.period = util.interval_mapper(args.period)
         self.preload = int(args.preload)
+        self.websocket = args.websocket
 
         self.mode = util.mode_mapper(args.mode)
 
@@ -42,7 +44,8 @@ class Application:
         if not budget and self.mode in [TradingMode.LIVE]:
             raise ValueError("Budget should be more that '0' for live trading.")
 
-        self.strategy = strategy(self.chart, self.exchange, self.mode, budget)
+        strategy_args = util.parse_strategy_args(args.strategy_args)
+        self.strategy = strategy(strategy_args, self.chart, self.exchange, self.mode, budget)
 
         self.strategy_ticker_thread = None
 
@@ -55,13 +58,16 @@ class Application:
             start = self.start_time - (interval * self.preload)
             end = self.start_end
 
-        candles = self.exchange.returnChartData(self.pair, self.period, start, end)
+        candles, last_candle = self.exchange.returnChartData(self.pair, self.period, start, end)
         self.strategy.on_preload(candles, self.preload)
 
         candles = candles[self.preload:]
 
         if self.mode in [TradingMode.LIVE, TradingMode.LIVE_TEST]:
-            self.strategy_ticker_thread = LiveTicker(self)
+            if self.websocket:
+                self.strategy_ticker_thread = WebsocketLiveTicker(self, last_candle)
+            else:
+                self.strategy_ticker_thread = LiveTicker(self, last_candle)
         else:
             self.strategy_ticker_thread = BacktestTicker(self, candles)
 
@@ -121,6 +127,7 @@ if __name__ == "__main__":
 
     p.add_argument('--exchange', '-e', default=None, help=f"Exchange used for trading.")
     p.add_argument('--strategy', '-s', default='default', help=f"Trading strategy.")
+    p.add_argument('--strategy-args', '-a', default=None, help=f"Trading strategy arguments. ex. 'a=1;b=2'")
 
     p.add_argument('--list-exchanges', default=None, help=f"Show available exchanges.")
     p.add_argument('--list-strategies', default=None, help=f"Show available strategies.")

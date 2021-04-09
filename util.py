@@ -90,3 +90,10 @@ def end_time(t):
         end_t = int(t)
 
     return end_t
+
+
+def parse_strategy_args(args):
+    if not args:
+        return {}
+
+    return dict(map(lambda arg: arg.split("="), args.split(";")))
