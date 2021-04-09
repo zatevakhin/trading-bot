@@ -8,7 +8,7 @@ from termcolor import colored
 class StrategyBase(ABC):
     __strategy__ = None
 
-    def __init__(self, chart, exchange, mode, budget):
+    def __init__(self, args, chart, exchange, mode, budget):
         self.chart = chart
         self.exchange = exchange
         self.pair = self.chart.pair
@@ -46,12 +46,23 @@ class StrategyBase(ABC):
 
         ret: dict = self.tick()
 
-        self.update_open_position()
+        self.update_open_position(candle)
 
         return ret
 
     @abstractmethod
     def tick(self) -> dict:
+        raise NotImplementedError
+
+    def on_rt_tick(self, candle: 'Candle') -> dict:
+        ret: dict = self.rt_tick(candle)
+
+        self.update_open_position(candle)
+
+        return ret
+
+    @abstractmethod
+    def rt_tick(self, candle: 'Candle') -> dict:
         raise NotImplementedError
 
     def get_current_candle(self) -> 'Candle':
@@ -86,9 +97,9 @@ class StrategyBase(ABC):
     def get_open_position(self) -> 'Position':
         return self.position
 
-    def update_open_position(self):
+    def update_open_position(self, candle: 'Candle'):
         if self.position:
-            self.position.tick(self.get_current_candle())
+            self.position.tick(candle)
 
             if self.position.close_candle:
                 self.trades.append(self.position)

@@ -50,7 +50,4 @@ class WebsocketLiveTicker(Worker):
 
         if self.candle.is_closed():
             self.app.chart_tick(self.candle)
-            self.candle = Candle(interval=self.period,
-                                 opn=self.candle.current,
-                                 high=self.candle.current,
-                                 low=self.candle.current)
+            self.candle = None
