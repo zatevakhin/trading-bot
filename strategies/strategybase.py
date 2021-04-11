@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 
 from basetypes.indicators import Indicators
+from loguru import logger
 from position import Position
-from termcolor import colored
 
 
 class StrategyBase(ABC):
@@ -116,7 +116,7 @@ class StrategyBase(ABC):
 
         if trades_profit_percent:
             profit = sum(trades_profit_percent)
-            pf = colored("{: 3.2f}%".format(profit), 'white', attrs=["bold"])
-            sf = colored("{}".format(len(closed_positions)), 'yellow')
+            pf = f"<bold><white>{profit:3.2f}%</white></bold>"
+            sf = f"<yellow>{len(closed_positions)}</yellow>"
 
-            print(f"Closed positions: {sf}, Summary profit: {pf}")
+            logger.opt(colors=True).info(f"Closed positions: {sf}, Summary profit: {pf}")

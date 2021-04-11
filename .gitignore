@@ -1,7 +1,8 @@
 .vscode
+.venv
 .trash
 __pycache__
+logs
 *.db
-*.venv
-userconfig.py
 *.csv
+userconfig.py

@@ -2,7 +2,7 @@ import math
 
 from basetypes.exchange import Exchange
 from basetypes.order import Order, OrderStatus
-from termcolor import colored
+from loguru import logger
 
 
 def map_order_status(status):
@@ -18,7 +18,7 @@ def map_order_status(status):
 
 
 def convert_binance_to_internal(order: dict):
-    print(colored(">>>", 'yellow'), order)
+    logger.opt(colors=True).info(f"<yellow>>>></yellow> {order}")
     order_id = order.get("orderId")
     order_status = order.get("status")
 
