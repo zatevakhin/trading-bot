@@ -1,6 +1,7 @@
 import numpy as np
 from basetypes.trend_direction import TrendDirection
 from chart import Chart
+from loguru import logger
 from utils.trand_indicators import *
 
 from strategies.strategybase import StrategyBase
@@ -44,7 +45,8 @@ class Strategy(StrategyBase):
             trend_direction = TrendDirection.DOWNTREND
 
         #--------------------------
-        print(trend_direction, self.previous_trend, (self.num_candles_uptrend, self.num_candles_downtrend))
+        logger.info(
+            f'{trend_direction} {self.previous_trend} ({self.num_candles_uptrend}, {self.num_candles_downtrend})')
 
         if trend_direction in [TrendDirection.UPTREND, TrendDirection.FLAT]:
             if self.previous_trend in [TrendDirection.DOWNTREND]:

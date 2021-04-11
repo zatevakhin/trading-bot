@@ -1,7 +1,10 @@
 import argparse
+import sys
 import time
+from datetime import datetime
+from pathlib import Path
 
-from termcolor import colored
+from loguru import logger
 
 import util
 from chart import Chart
@@ -16,8 +19,34 @@ from workers.websocket_live_ticker import WebsocketLiveTicker
 class Application:
     def __init__(self, args):
 
+        # Configure Logger
+        self.configure_logger(args)
+
         # Configure Trader
         self.configure_trader(args)
+
+    def configure_logger(self, args):
+        logger.remove()
+
+        save_to_file = args.log_store
+
+        # format = '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>'
+        format = '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level}</level> | <level>{message}</level>'
+
+        params = {
+            'level': args.log_level,
+            'format': format,
+            'backtrace': True,
+            'diagnose': True,
+            'enqueue': False,
+            'catch': True
+        }
+
+        logger.add(sys.stderr, **params)
+        if save_to_file:
+            current_time = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+            log_path = args.log_dir / f"START_{current_time}::.txt"
+            logger.add(str(log_path), rotation="50 MB", **params)
 
     def configure_trader(self, args):
         self.pair = CurrencyPair(*args.pair.split(","))
@@ -79,7 +108,7 @@ class Application:
                 try:
                     time.sleep(1)
 
-                    i = input(colored(">>> ", 'yellow'))
+                    i = input()
 
                     if i in ["t", "T"]:
                         self.strategy.show_positions()
@@ -90,7 +119,7 @@ class Application:
                     elif i in ["c", "C"]:
                         self.strategy.close_trade()
                     else:
-                        print("Unhandled input: ", i)
+                        logger.warning(f"Unhandled input: {i}", i)
 
                 except KeyboardInterrupt:
                     loop = False
@@ -99,7 +128,7 @@ class Application:
         self.strategy_ticker_thread.stop()
         self.strategy_ticker_thread.join()
 
-        print(colored(">>>", 'red'), "Exit.")
+        logger.opt(colors=True).info("<red>>></red> Exit")
 
     def chart_tick(self, candle):
         _ = self.strategy.on_tick(candle)
@@ -131,6 +160,17 @@ if __name__ == "__main__":
 
     p.add_argument('--list-exchanges', default=None, help=f"Show available exchanges.")
     p.add_argument('--list-strategies', default=None, help=f"Show available strategies.")
+
+    p.add_argument('--log-store',
+                   dest='log_store',
+                   default=False,
+                   action=argparse.BooleanOptionalAction,
+                   help=f"Should logs be saved to files.")
+    p.add_argument('--log-dir',
+                   type=Path,
+                   default=Path(__file__).absolute().parent / "logs",
+                   help=f"Path to the logs directory.")
+    p.add_argument('--log-level', default='INFO', help=f"Logging level.")
 
     w = Application(p.parse_args())
     w.main()

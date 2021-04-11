@@ -1,6 +1,7 @@
 import json
 
 from candle import Candle
+from loguru import logger
 from websocket import WebSocketApp
 
 from .baseworker import Worker
@@ -23,7 +24,7 @@ class WebsocketLiveTicker(Worker):
         self.wsapp.close()
 
     def run(self):
-        print("Started: WebsocketLiveTicker")
+        logger.info("Started: WebsocketLiveTicker")
         buy = str(self.pair.buy).lower()
         sell = str(self.pair.sell).lower()
 
@@ -33,10 +34,10 @@ class WebsocketLiveTicker(Worker):
             self.on_message(json.loads(data))
 
         def on_open(wsapp, message):
-            print(message)
+            logger.info(message)
 
         def on_error(wsapp, message):
-            print(message)
+            logger.info(message)
 
         self.wsapp = WebSocketApp(stream, on_message=on_message_cb, on_open=on_open, on_error=on_error)
         self.wsapp.run_forever()

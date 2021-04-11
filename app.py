@@ -2,8 +2,10 @@ import argparse
 import sys
 import time
 from datetime import datetime
+from pathlib import Path
 
 import pyqtgraph as pg
+from loguru import logger
 from PyQt5 import QtWidgets
 from pyqtgraph import QtCore, QtGui
 
@@ -92,6 +94,9 @@ class MainWindow(pg.GraphicsView):
         super(MainWindow, self).__init__()
         self.keyPressed.connect(self.on_key)
 
+        # Configure Logger
+        self.configure_logger(args)
+
         # Configure Trader
         self.configure_trader(args)
 
@@ -137,6 +142,29 @@ class MainWindow(pg.GraphicsView):
         # self.proxy_switcher.join()
 
         event.accept()
+
+    def configure_logger(self, args):
+        logger.remove()
+
+        save_to_file = args.log_store
+
+        # format = '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>'
+        format = '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level}</level> | <level>{message}</level>'
+
+        params = {
+            'level': args.log_level,
+            'format': format,
+            'backtrace': True,
+            'diagnose': True,
+            'enqueue': False,
+            'catch': True
+        }
+
+        logger.add(sys.stderr, **params)
+        if save_to_file:
+            current_time = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+            log_path = args.log_dir / f"START_{current_time}::.txt"
+            logger.add(str(log_path), rotation="50 MB", **params)
 
     def configure_trader(self, args):
         self.pair = CurrencyPair(*args.pair.split(","))
@@ -375,6 +403,17 @@ if __name__ == "__main__":
     p.add_argument('--strategy-args', '-a', default=None, help=f"Trading strategy arguments. ex. 'a=1;b=2'")
 
     p.add_argument('--list-exchanges', default=None, help=f"Show available exchanges.")
+
+    p.add_argument('--log-store',
+                   dest='log_store',
+                   default=False,
+                   action=argparse.BooleanOptionalAction,
+                   help=f"Should logs be saved to files.")
+    p.add_argument('--log-dir',
+                   type=Path,
+                   default=Path(__file__).absolute().parent / "logs",
+                   help=f"Path to the logs directory.")
+    p.add_argument('--log-level', default='INFO', help=f"Logging level.")
 
     app = QtWidgets.QApplication(sys.argv)
     w = MainWindow(p.parse_args())
