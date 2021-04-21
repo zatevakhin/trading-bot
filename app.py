@@ -126,7 +126,10 @@ class MainWindow(pg.GraphicsView):
                 self.strategy_ticker_thread.pause()
             else:
                 self.strategy_ticker_thread.resume()
-
+        elif event.key() == QtCore.Qt.Key_O:
+            self.strategy.open_trade(stop_loss_percent=1)
+        elif event.key() == QtCore.Qt.Key_C:
+            self.strategy.close_trade()
         elif event.key() == QtCore.Qt.Key_Q:
             pass
             # self.close()
@@ -147,9 +150,12 @@ class MainWindow(pg.GraphicsView):
         logger.remove()
 
         save_to_file = args.log_store
+        extended_logs = args.log_extended
 
-        # format = '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>'
-        format = '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level}</level> | <level>{message}</level>'
+        if extended_logs:
+            format = '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>'
+        else:
+            format = '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level}</level> | <level>{message}</level>'
 
         params = {
             'level': args.log_level,
@@ -164,7 +170,7 @@ class MainWindow(pg.GraphicsView):
         if save_to_file:
             current_time = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
             log_path = args.log_dir / f"START_{current_time}::.txt"
-            logger.add(str(log_path), rotation="50 MB", **params)
+            logger.add(str(log_path), rotation="100 MB", **params)
 
     def configure_trader(self, args):
         self.pair = CurrencyPair(*args.pair.split(","))
@@ -414,6 +420,7 @@ if __name__ == "__main__":
                    default=Path(__file__).absolute().parent / "logs",
                    help=f"Path to the logs directory.")
     p.add_argument('--log-level', default='INFO', help=f"Logging level.")
+    p.add_argument('--log-extended', '-L', action='store_true', help=f"Show extended logs.")
 
     app = QtWidgets.QApplication(sys.argv)
     w = MainWindow(p.parse_args())
