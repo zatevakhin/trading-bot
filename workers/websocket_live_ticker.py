@@ -19,8 +19,10 @@ class WebsocketLiveTicker(Worker):
         self.tick = app.tick
         self.wsapp: 'WebSocketApp' = None
         self.candle: 'Candle' = last_candle
+        self.reconnect = True
 
     def stop(self):
+        self.reconnect = False
         self.wsapp.close()
 
     def run(self):
@@ -30,17 +32,32 @@ class WebsocketLiveTicker(Worker):
 
         stream = f"{BINANCE_WEBSOCKET}{buy}{sell}@ticker"
 
-        def on_message_cb(wsapp, data):
+        def on_message(wsapp, data):
             self.on_message(json.loads(data))
 
         def on_open(wsapp, message):
             logger.info(message)
 
-        def on_error(wsapp, message):
+        def on_close(wsapp, message):
             logger.info(message)
 
-        self.wsapp = WebSocketApp(stream, on_message=on_message_cb, on_open=on_open, on_error=on_error)
-        self.wsapp.run_forever()
+        def on_error(wsapp, message):
+            logger.error(message)
+
+        is_restart = False
+        while self.reconnect:
+            self.wsapp = WebSocketApp(stream,
+                                      on_message=on_message,
+                                      on_open=on_open,
+                                      on_error=on_error,
+                                      on_close=on_close)
+            logger.success(f"WebSocket app {is_restart and 're-' or ''}starting.")
+            self.wsapp.run_forever()
+            logger.warning("WebSocket app stopped.")
+
+            is_restart = True
+
+        logger.info("Completly Stopped: WebsocketLiveTicker")
 
     def on_message(self, data):
         if not self.candle:
@@ -48,6 +65,7 @@ class WebsocketLiveTicker(Worker):
 
         last_price = float(data.get("c"))
         self.candle.tick(last_price)
+        self.app.strategy.on_rt_tick(self.candle)
 
         if self.candle.is_closed():
             self.app.chart_tick(self.candle)
