@@ -57,7 +57,7 @@ class StrategyBase(ABC):
     def on_rt_tick(self, candle: 'Candle') -> dict:
         ret: dict = self.rt_tick(candle)
 
-        self.update_open_position(candle)
+        self.update_open_position(candle, rt=True)
 
         return ret
 
@@ -97,9 +97,12 @@ class StrategyBase(ABC):
     def get_open_position(self) -> 'Position':
         return self.position
 
-    def update_open_position(self, candle: 'Candle'):
+    def update_open_position(self, candle: 'Candle', rt=False):
         if self.position:
-            self.position.tick(candle)
+            if rt:
+                self.position.rt_tick(candle)
+            else:
+                self.position.tick(candle)
 
             if self.position.close_candle:
                 self.trades.append(self.position)
