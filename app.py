@@ -157,14 +157,7 @@ class MainWindow(pg.GraphicsView):
         else:
             format = '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level}</level> | <level>{message}</level>'
 
-        params = {
-            'level': args.log_level,
-            'format': format,
-            'backtrace': True,
-            'diagnose': True,
-            'enqueue': False,
-            'catch': True
-        }
+        params = {'level': args.log_level, 'format': format, 'backtrace': True, 'diagnose': True, 'enqueue': False, 'catch': True}
 
         logger.add(sys.stderr, **params)
         if save_to_file:
@@ -207,20 +200,27 @@ class MainWindow(pg.GraphicsView):
         date_axis2 = TimeAxisItem(orientation='bottom')
         date_axis3 = TimeAxisItem(orientation='bottom')
         date_axis4 = TimeAxisItem(orientation='bottom')
+        date_axis5 = TimeAxisItem(orientation='bottom')
 
         self.plot_price = self.layout.addPlot(0, 0, title='Price with EMA 50,200', axisItems={'bottom': date_axis1})
         self.plot_rsi = self.layout.addPlot(1, 0, title='RSI', axisItems={'bottom': date_axis2})
         self.plot_dmi = self.layout.addPlot(2, 0, title='DMI', axisItems={'bottom': date_axis3})
         self.plot_scalp = self.layout.addPlot(3, 0, title='Scalping', axisItems={'bottom': date_axis4})
+        self.plot_macd = self.layout.addPlot(4, 0, title='MACD', axisItems={'bottom': date_axis5})
 
         self.plot_price.setXLink(self.plot_rsi)
         self.plot_rsi.setXLink(self.plot_dmi)
         self.plot_dmi.setXLink(self.plot_scalp)
+        # self.plot_dmi.setXLink(self.plot_scalp)
+        self.plot_scalp.setXLink(self.plot_macd)
 
         self.plot_price.showGrid(x=True, y=True, alpha=0.3)
         self.plot_rsi.showGrid(x=True, y=True, alpha=0.3)
         self.plot_dmi.showGrid(x=True, y=True, alpha=0.3)
-        self.plot_scalp.showGrid(x=True, y=True, alpha=0.3)
+        # self.plot_scalp.showGrid(x=True, y=True, alpha=0.3)
+        self.plot_macd.showGrid(x=True, y=True, alpha=0.3)
+        self.layout.removeItem(self.plot_dmi)
+        self.layout.removeItem(self.plot_scalp)
 
     def main(self):
         interval = util.interval_mapper_to_seconds(self.period)
@@ -275,6 +275,10 @@ class MainWindow(pg.GraphicsView):
         self.curve_di_p = self.plot_dmi.plot(datetime_list, di_plus_list)
         self.curve_di_m = self.plot_dmi.plot(datetime_list, di_minus_list)
 
+        self.curve_macd = self.plot_macd.plot()
+        self.curve_macd_sig = self.plot_macd.plot()
+        self.curve_macd_hst = self.plot_macd.plot()
+
         self.scatter_buy = pg.ScatterPlotItem(size=15, brush=pg.mkBrush(0, 0, 255, 255), pen=pg.mkPen('y'), symbol='t1')
         self.scatter_sell = pg.ScatterPlotItem(size=15, brush=pg.mkBrush(255, 0, 0, 255), pen=pg.mkPen('y'), symbol='t')
 
@@ -286,7 +290,7 @@ class MainWindow(pg.GraphicsView):
         self.curve_downtrend.setPen(pg.mkPen(color=(255, 0, 0), width=3))
         self.curve_uptrend.setPen(pg.mkPen(color=(0, 0, 255), width=3))
 
-        self.curve_scalping_line = self.plot_scalp.plot()
+        # self.curve_scalping_line = self.plot_scalp.plot()
 
         self.curve_ema6.setPen(pg.mkPen(color=(255, 0, 255), width=2))
         self.curve_ema12.setPen(pg.mkPen(color=(180, 0, 180), width=2))
@@ -297,6 +301,10 @@ class MainWindow(pg.GraphicsView):
         self.curve_adx.setPen(pg.mkPen(color=(255, 0, 0), width=1))
         self.curve_di_p.setPen(pg.mkPen(color=(0, 0, 255), width=1))
         self.curve_di_m.setPen(pg.mkPen(color=(180, 120, 40), width=1))
+
+        self.curve_macd.setPen(pg.mkPen(color=(0, 0, 255), width=1))
+        self.curve_macd_sig.setPen(pg.mkPen(color=(255, 0, 0), width=1))
+        self.curve_macd_hst.setPen(pg.mkPen(color=(0, 255, 0), width=1))
 
         if self.mode in [TradingMode.LIVE, TradingMode.LIVE_TEST]:
             if self.websocket:
@@ -324,10 +332,7 @@ class MainWindow(pg.GraphicsView):
                 open_trades_candles.append({'pos': [trade.open_candle.timestamp, trade.open_candle.close], 'data': 1})
 
             if trade and trade.close_candle:
-                close_trades_candles.append({
-                    'pos': [trade.close_candle.timestamp, trade.close_candle.close],
-                    'data': 1
-                })
+                close_trades_candles.append({'pos': [trade.close_candle.timestamp, trade.close_candle.close], 'data': 1})
 
         indicators: 'Indicators' = self.strategy.get_indicators()
 
@@ -364,6 +369,16 @@ class MainWindow(pg.GraphicsView):
         self.scatter_sell.setData(spots=close_trades_candles)
         self.scatter_buy.setData(spots=open_trades_candles)
 
+        if 'macd' in ret_data:
+            macd = ret_data.get('macd')
+            signal = ret_data.get('signal')
+            hist = ret_data.get('hist')
+
+            t_macd = list(datetime_list[-len(macd):])
+            self.curve_macd.setData(t_macd, macd)
+            self.curve_macd_sig.setData(t_macd, signal)
+            self.curve_macd_hst.setData(t_macd, hist)
+
         if 'uptrend' in ret_data:
             uptrend = ret_data.get('uptrend')
             t_uptrend = list(datetime_list[-len(uptrend):])
@@ -374,8 +389,8 @@ class MainWindow(pg.GraphicsView):
             t_downtrend = list(datetime_list[-len(downtrend):])
             self.curve_downtrend.setData(t_downtrend, downtrend)
 
-        if 'scalping-line' in ret_data:
-            scalping_line = ret_data.get('scalping-line')
+        if 'scalping' in ret_data:
+            scalping_line = ret_data.get('scalping')
             t_scalping_line = list(datetime_list[-len(scalping_line):])
             self.curve_scalping_line.setData(t_scalping_line, scalping_line)
         else:
@@ -395,10 +410,7 @@ if __name__ == "__main__":
     p.add_argument('--pair', '-c', default='BTC,USDT', help=f"Currency pair. ex. BTC,USDT.")
     p.add_argument('--tick', '-t', default=30, help=f"Candle update timespan.")
     p.add_argument('--tick-b', default=0.5, help=f"Candle update time for backtesting.")
-    p.add_argument('--budget',
-                   '-b',
-                   default=None,
-                   help=f"Budget used to by crypto in currency which second param in pair.")
+    p.add_argument('--budget', '-b', default=None, help=f"Budget used to by crypto in currency which second param in pair.")
 
     p.add_argument('--period', '-p', default='5m', help=f"Timespan width for candle.")
     p.add_argument('--period-help', '-P', action='store_true', help=f"Show period help.")
@@ -415,10 +427,7 @@ if __name__ == "__main__":
                    default=False,
                    action=argparse.BooleanOptionalAction,
                    help=f"Should logs be saved to files.")
-    p.add_argument('--log-dir',
-                   type=Path,
-                   default=Path(__file__).absolute().parent / "logs",
-                   help=f"Path to the logs directory.")
+    p.add_argument('--log-dir', type=Path, default=Path(__file__).absolute().parent / "logs", help=f"Path to the logs directory.")
     p.add_argument('--log-level', default='INFO', help=f"Logging level.")
     p.add_argument('--log-extended', '-L', action='store_true', help=f"Show extended logs.")
 
