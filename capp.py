@@ -12,7 +12,6 @@ from customtypes import CurrencyPair, TradingMode
 from exchange_api import get_exchange_api
 from utils.strategy_manager import StrategyManager
 from workers.backtest_ticker import BacktestTicker
-from workers.live_ticker import LiveTicker
 from workers.websocket_live_ticker import WebsocketLiveTicker
 
 
@@ -33,14 +32,7 @@ class Application:
         # format = '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>'
         format = '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level}</level> | <level>{message}</level>'
 
-        params = {
-            'level': args.log_level,
-            'format': format,
-            'backtrace': True,
-            'diagnose': True,
-            'enqueue': False,
-            'catch': True
-        }
+        params = {'level': args.log_level, 'format': format, 'backtrace': True, 'diagnose': True, 'enqueue': False, 'catch': True}
 
         logger.add(sys.stderr, **params)
         if save_to_file:
@@ -57,7 +49,6 @@ class Application:
         self.backtest_tick = float(args.tick_b)
         self.period = util.interval_mapper(args.period)
         self.preload = int(args.preload)
-        self.websocket = args.websocket
 
         self.mode = util.mode_mapper(args.mode)
 
@@ -93,10 +84,7 @@ class Application:
         candles = candles[self.preload:]
 
         if self.mode in [TradingMode.LIVE, TradingMode.LIVE_TEST]:
-            if self.websocket:
-                self.strategy_ticker_thread = WebsocketLiveTicker(self, last_candle)
-            else:
-                self.strategy_ticker_thread = LiveTicker(self, last_candle)
+            self.strategy_ticker_thread = WebsocketLiveTicker(self, last_candle)
         else:
             self.strategy_ticker_thread = BacktestTicker(self, candles)
 
@@ -145,14 +133,10 @@ if __name__ == "__main__":
     p.add_argument('--pair', '-c', default='BTC,USDT', help=f"Currency pair. ex. BTC,USDT.")
     p.add_argument('--tick', '-t', default=30, help=f"Candle update timespan.")
     p.add_argument('--tick-b', default=0.5, help=f"Candle update time for backtesting.")
-    p.add_argument('--budget',
-                   '-b',
-                   default=None,
-                   help=f"Budget used to by crypto in currency which second param in pair.")
+    p.add_argument('--budget', '-b', default=None, help=f"Budget used to by crypto in currency which second param in pair.")
 
     p.add_argument('--period', '-p', default='5m', help=f"Timespan width for candle.")
     p.add_argument('--period-help', '-P', action='store_true', help=f"Show period help.")
-    p.add_argument('--websocket', '-w', action='store_true', help=f"Use websocket to update candle.")
 
     p.add_argument('--exchange', '-e', default=None, help=f"Exchange used for trading.")
     p.add_argument('--strategy', '-s', default='default', help=f"Trading strategy.")
@@ -166,10 +150,7 @@ if __name__ == "__main__":
                    default=False,
                    action=argparse.BooleanOptionalAction,
                    help=f"Should logs be saved to files.")
-    p.add_argument('--log-dir',
-                   type=Path,
-                   default=Path(__file__).absolute().parent / "logs",
-                   help=f"Path to the logs directory.")
+    p.add_argument('--log-dir', type=Path, default=Path(__file__).absolute().parent / "logs", help=f"Path to the logs directory.")
     p.add_argument('--log-level', default='INFO', help=f"Logging level.")
 
     w = Application(p.parse_args())

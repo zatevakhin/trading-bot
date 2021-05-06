@@ -173,7 +173,6 @@ class MainWindow(pg.GraphicsView):
         self.backtest_tick = float(args.tick_b)
         self.period = util.interval_mapper(args.period)
         self.preload = int(args.preload)
-        self.websocket = args.websocket
 
         self.mode = util.mode_mapper(args.mode)
 
@@ -307,10 +306,7 @@ class MainWindow(pg.GraphicsView):
         self.curve_macd_hst.setPen(pg.mkPen(color=(0, 255, 0), width=1))
 
         if self.mode in [TradingMode.LIVE, TradingMode.LIVE_TEST]:
-            if self.websocket:
-                self.strategy_ticker_thread = WebsocketLiveTicker(self, last_candle)
-            else:
-                self.strategy_ticker_thread = LiveTicker(self, last_candle)
+            self.strategy_ticker_thread = WebsocketLiveTicker(self, last_candle)
         else:
             self.strategy_ticker_thread = BacktestTicker(self, candles)
 
@@ -418,7 +414,6 @@ if __name__ == "__main__":
 
     p.add_argument('--period', '-p', default='5m', help=f"Timespan width for candle.")
     p.add_argument('--period-help', '-P', action='store_true', help=f"Show period help.")
-    p.add_argument('--websocket', '-w', action='store_true', help=f"Use websocket to update candle.")
 
     p.add_argument('--exchange', '-e', default=None, help=f"Exchange used for trading.")
     p.add_argument('--strategy', '-s', default='default', help=f"Trading strategy.")
