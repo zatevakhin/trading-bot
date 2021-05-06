@@ -16,7 +16,6 @@ from exchange_api import get_exchange_api
 from utils.strategy_manager import StrategyManager
 from workers.backtest_ticker import BacktestTicker
 from workers.baseworker import WorkerStatus
-from workers.live_ticker import LiveTicker
 from workers.websocket_live_ticker import WebsocketLiveTicker
 
 
@@ -206,21 +205,22 @@ class MainWindow(pg.GraphicsView):
         self.plot_rsi = self.layout.addPlot(1, 0, title='RSI', axisItems={'bottom': date_axis2})
         self.plot_dmi = self.layout.addPlot(2, 0, title='DMI', axisItems={'bottom': date_axis3})
         self.plot_scalp = self.layout.addPlot(3, 0, title='Scalping', axisItems={'bottom': date_axis4})
+        self.plot_scalp_visibile = True
         self.plot_macd = self.layout.addPlot(4, 0, title='MACD', axisItems={'bottom': date_axis5})
+        self.plot_macd_visibile = True
 
         self.plot_price.setXLink(self.plot_rsi)
         self.plot_rsi.setXLink(self.plot_dmi)
         self.plot_dmi.setXLink(self.plot_scalp)
-        # self.plot_dmi.setXLink(self.plot_scalp)
         self.plot_scalp.setXLink(self.plot_macd)
 
         self.plot_price.showGrid(x=True, y=True, alpha=0.3)
         self.plot_rsi.showGrid(x=True, y=True, alpha=0.3)
         self.plot_dmi.showGrid(x=True, y=True, alpha=0.3)
-        # self.plot_scalp.showGrid(x=True, y=True, alpha=0.3)
+        self.plot_scalp.showGrid(x=True, y=True, alpha=0.3)
         self.plot_macd.showGrid(x=True, y=True, alpha=0.3)
         self.layout.removeItem(self.plot_dmi)
-        self.layout.removeItem(self.plot_scalp)
+        # self.layout.removeItem(self.plot_scalp)
 
     def main(self):
         interval = util.interval_mapper_to_seconds(self.period)
@@ -290,7 +290,7 @@ class MainWindow(pg.GraphicsView):
         self.curve_downtrend.setPen(pg.mkPen(color=(255, 0, 0), width=3))
         self.curve_uptrend.setPen(pg.mkPen(color=(0, 0, 255), width=3))
 
-        # self.curve_scalping_line = self.plot_scalp.plot()
+        self.curve_scalping_line = self.plot_scalp.plot()
 
         self.curve_ema6.setPen(pg.mkPen(color=(255, 0, 255), width=2))
         self.curve_ema12.setPen(pg.mkPen(color=(180, 0, 180), width=2))
@@ -329,10 +329,10 @@ class MainWindow(pg.GraphicsView):
 
         for trade in [*closed_positions, open_position]:
             if trade and trade.open_candle:
-                open_trades_candles.append({'pos': [trade.open_candle.timestamp, trade.open_candle.close], 'data': 1})
+                open_trades_candles.append({'pos': [trade.open_candle.t_open, trade.open_candle.p_close], 'data': 1})
 
             if trade and trade.close_candle:
-                close_trades_candles.append({'pos': [trade.close_candle.timestamp, trade.close_candle.close], 'data': 1})
+                close_trades_candles.append({'pos': [trade.close_candle.t_open, trade.close_candle.p_close], 'data': 1})
 
         indicators: 'Indicators' = self.strategy.get_indicators()
 
@@ -378,6 +378,10 @@ class MainWindow(pg.GraphicsView):
             self.curve_macd.setData(t_macd, macd)
             self.curve_macd_sig.setData(t_macd, signal)
             self.curve_macd_hst.setData(t_macd, hist)
+        else:
+            if self.plot_macd_visibile and self.plot_macd:
+                self.layout.removeItem(self.plot_macd)
+                self.plot_macd_visibile = False
 
         if 'uptrend' in ret_data:
             uptrend = ret_data.get('uptrend')
@@ -394,9 +398,9 @@ class MainWindow(pg.GraphicsView):
             t_scalping_line = list(datetime_list[-len(scalping_line):])
             self.curve_scalping_line.setData(t_scalping_line, scalping_line)
         else:
-            if self.plot_scalp:
+            if self.plot_scalp_visibile and self.plot_scalp:
                 self.layout.removeItem(self.plot_scalp)
-                self.plot_scalp = None
+                self.plot_scalp_visibile = False
 
 
 if __name__ == "__main__":

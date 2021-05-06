@@ -12,9 +12,7 @@ from exchange_api.customtypes import BinanceFilterError, BinanceQueryError
 from exchange_api.utils import binance_filters
 from exchange_api.utils.order_convert import convert_binance_to_internal
 
-BINANCE_API_ENDPOINTS = [
-    "https://api.binance.com", "https://api1.binance.com", "https://api2.binance.com", "https://api3.binance.com"
-]
+BINANCE_API_ENDPOINTS = ["https://api.binance.com", "https://api1.binance.com", "https://api2.binance.com", "https://api3.binance.com"]
 
 
 def get_api_endpoint():
@@ -37,8 +35,7 @@ class Binance:
         data['timestamp'] = int(time.time() * 1000)
         data['recvWindow'] = 5000
         query_string = urlencode(data)
-        data['signature'] = hmac.new(self.secret.encode('utf-8'), query_string.encode('utf-8'),
-                                     hashlib.sha256).hexdigest()
+        data['signature'] = hmac.new(self.secret.encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256).hexdigest()
         url = urljoin(get_api_endpoint(), command)
 
         resp = operation(url, headers=headers, params=data)
@@ -52,24 +49,13 @@ class Binance:
         params = {"symbol": symbol}
         return self._api_query(get_api_endpoint(), "/api/v3/ticker/price", params).get("price", None)
 
-    def returnKlines(self,
-                     symbol: str,
-                     interval: str,
-                     startTime: int = None,
-                     endTime: int = None,
-                     limit: int = 1000) -> list['Candle']:
+    def returnKlines(self, symbol: str, interval: str, startTime: int = None, endTime: int = None, limit: int = 1000) -> list['Candle']:
 
         received_klines = []
         start_from = startTime
 
         while start_from < endTime:
-            params = {
-                "symbol": symbol,
-                "interval": interval,
-                "startTime": start_from,
-                "endTime": endTime,
-                "limit": limit
-            }
+            params = {"symbol": symbol, "interval": interval, "startTime": start_from, "endTime": endTime, "limit": limit}
 
             params = {k: v for k, v in params.items() if v is not None}
             klines = self._api_query(get_api_endpoint(), "/api/v3/klines", params)
@@ -78,20 +64,23 @@ class Binance:
             close_time = int(received_klines[len(received_klines) - 1][6])  # 6 - close time
             start_from = close_time
 
-        candle_interval = util.interval_mapper(interval)
+        period = util.interval_mapper(interval)
         candles = []
         for kline in received_klines[:-1]:
-            (o_time, o, h, l, c, *x) = kline
-            candles.append(
-                Candle(candle_interval,
-                       timestamp=o_time / 1000,
-                       opn=float(o),
-                       close=float(c),
-                       high=float(h),
-                       low=float(l)))
+            (o_t, o_p, h_p, l_p, c_p, v, c_t, *x) = kline
 
-        (o_time, o, h, l, c, *x) = received_klines[-1]
-        return candles, Candle(candle_interval, timestamp=o_time / 1000, opn=float(o), high=float(h), low=float(l))
+            candles.append(
+                Candle(period,
+                       int(o_t / 1000),
+                       int(c_t / 1000),
+                       p_open=float(o_p),
+                       p_close=float(c_p),
+                       p_high=float(h_p),
+                       p_low=float(l_p),
+                       volume=float(v)))
+
+        (o_t, o_p, h_p, l_p, c_p, v, c_t, *x) = received_klines[-1]
+        return candles, Candle(period, int(o_t / 1000), None, p_open=float(o_p), p_high=float(h_p), p_low=float(l_p))
 
     def createBuyOrder(self, symbol: str, price: int, quantity: float, timeInForce: str) -> 'Order':
         passed_price_filter, price = binance_filters.get_price_filter(symbol, self.exchange_info, price)
@@ -102,14 +91,7 @@ class Binance:
         if not passed_quantity_filter:
             raise BinanceFilterError(symbol, quantity, "Quantity")
 
-        params = {
-            'symbol': symbol,
-            'side': 'BUY',
-            'type': 'LIMIT',
-            'timeInForce': timeInForce,
-            'quantity': quantity,
-            'price': price
-        }
+        params = {'symbol': symbol, 'side': 'BUY', 'type': 'LIMIT', 'timeInForce': timeInForce, 'quantity': quantity, 'price': price}
 
         order = self._api_query_private(requests.post, '/api/v3/order', params)
         return convert_binance_to_internal(order)
@@ -133,14 +115,7 @@ class Binance:
         if not passed_quantity_filter:
             raise BinanceFilterError(symbol, quantity, "Quantity")
 
-        params = {
-            'symbol': symbol,
-            'side': 'SELL',
-            'type': 'LIMIT',
-            'timeInForce': timeInForce,
-            'quantity': quantity,
-            'price': price
-        }
+        params = {'symbol': symbol, 'side': 'SELL', 'type': 'LIMIT', 'timeInForce': timeInForce, 'quantity': quantity, 'price': price}
 
         order = self._api_query_private(requests.post, '/api/v3/order', params)
         return convert_binance_to_internal(order)

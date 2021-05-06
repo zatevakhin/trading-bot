@@ -26,7 +26,7 @@ class Indicators:
 
     @datetime_array.setter
     def datetime_array(self, candles: list['Candle']):
-        self.datetime = list(map(lambda x: x.timestamp, candles))
+        self.datetime = list(map(lambda x: x.t_open, candles))
 
     @property
     def close_array(self) -> np.array:
@@ -34,7 +34,7 @@ class Indicators:
 
     @close_array.setter
     def close_array(self, candles: list['Candle']):
-        self.close = np.array(list(map(lambda x: x.close, candles)))
+        self.close = np.array(list(map(lambda x: x.p_close, candles)))
 
     @property
     def open_array(self) -> np.array:
@@ -42,7 +42,7 @@ class Indicators:
 
     @open_array.setter
     def open_array(self, candles: list['Candle']):
-        self.open = np.array(list(map(lambda x: x.open, candles)))
+        self.open = np.array(list(map(lambda x: x.p_open, candles)))
 
     @property
     def high_array(self) -> np.array:
@@ -50,7 +50,7 @@ class Indicators:
 
     @high_array.setter
     def high_array(self, candles: list['Candle']):
-        self.high = np.array(list(map(lambda x: x.high, candles)))
+        self.high = np.array(list(map(lambda x: x.p_high, candles)))
 
     @property
     def low_array(self) -> np.array:
@@ -58,7 +58,7 @@ class Indicators:
 
     @low_array.setter
     def low_array(self, candles: list['Candle']):
-        self.low = np.array(list(map(lambda x: x.low, candles)))
+        self.low = np.array(list(map(lambda x: x.p_low, candles)))
 
     @property
     def ema200_array(self) -> np.array:

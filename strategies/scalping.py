@@ -5,12 +5,12 @@ from chart import Chart
 
 from strategies.strategybase import StrategyBase
 
-MAIN_PERIOD = 50
-SIGNAL_PERIOD = 3
+MAIN_PERIOD = 30
+SIGNAL_PERIOD = 5
 
 
 class Strategy(StrategyBase):
-    __strategy__ = 'scalpinator'
+    __strategy__ = 'scalping'
 
     def __init__(self, args, chart: 'Chart', exchange, mode, budget):
         super().__init__(args, chart, exchange, mode, budget)
@@ -25,13 +25,13 @@ class Strategy(StrategyBase):
 
         scalping_line = signal_line - sma
 
-        if all((scalping_line > 0)[-3:]):
-            self.open_trade(stop_loss_percent=1.0)
+        if all((scalping_line > 0)[-1:]):
+            self.open_trade(stop_loss_percent=5.0)
 
-        if all((scalping_line < 0)[-2:]):
+        if all((scalping_line < 0)[-1:]):
             self.close_trade()
 
-        return {"scalping-line": scalping_line}
+        return {"scalping": scalping_line}
 
     def rt_tick(self, candle: 'Candle') -> dict:
 

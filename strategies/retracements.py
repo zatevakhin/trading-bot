@@ -24,8 +24,8 @@ class Strategy(StrategyBase):
         # endOfBullRun = open > close and low[1] > low and low[2] < low[1] and low[3] < low[2]
         # and (opn[2] > close[1] and opn[3] > close[2])
 
-        retracementEnded = opn[0] < close[0] and high[1] < high[0] and high[2] > high[1] and high[3] > high[2] and (
-            opn[2] > close[1] and opn[3] > close[2])
+        retracementEnded = opn[0] < close[0] and high[1] < high[0] and high[2] > high[1] and high[3] > high[2] and (opn[2] > close[1]
+                                                                                                                    and opn[3] > close[2])
         endOfBullRun = opn[0] > close[0] and low[1] > low[0] and low[2] < low[1] and low[3] < low[2]
 
         #--------------------------
