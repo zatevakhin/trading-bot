@@ -19,16 +19,20 @@ class Strategy(StrategyBase):
         candle = self.get_current_candle()
 
         close = self.indicators.close_array
+        psar = self.indicators.psar_array
 
         sma = ta.SMA(ta.SMA(close, math.ceil(MAIN_PERIOD / 2)), math.floor(MAIN_PERIOD / 2) + 1)
         signal_line = ta.SMA(close, SIGNAL_PERIOD)
 
         scalping_line = signal_line - sma
 
-        if all((scalping_line > 0)[-1:]):
+        if not (scalping_line > 0)[-2:][-2] and (scalping_line > 0)[-2:][-1]:
             self.open_trade(stop_loss_percent=5.0)
 
-        if all((scalping_line < 0)[-1:]):
+        # if not (scalping_line < 0)[-2:][-2] and (scalping_line < 0)[-2:][-1]:
+        #     self.close_trade()
+
+        if psar[-1] > candle.p_high:
             self.close_trade()
 
         return {"scalping": scalping_line}

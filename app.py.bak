@@ -285,6 +285,12 @@ class MainWindow(pg.GraphicsView):
 
         self.candlesticks = self.plot_price.plot()
         self.plot_price.addItem(self.candle_bars)
+        # self.plot_price.addItem(self.candle_volume_bars)
+
+        # pen = pg.mkPen(color='#AAAAAA', style=QtCore.Qt.DashLine)
+
+        # horizontal = pg.InfiniteLine(angle=0, movable=False, pen=pen)
+        # self.plot_price.addItem(horizontal, ignoreBounds=True)
 
         self.plot_price.setYRange(min(low_price_list), max(high_price_list))
         self.plot_price.setXRange(min(datetime_list), max(datetime_list))
@@ -307,8 +313,16 @@ class MainWindow(pg.GraphicsView):
 
         self.curve_volume = self.plot_volume.plot(datetime_list, volume_list)
 
-        self.scatter_price = pg.ScatterPlotItem()
-        self.plot_price.addItem(self.scatter_price)
+        self.scatter_buy = pg.ScatterPlotItem(size=15, brush=pg.mkBrush(0, 0, 255, 255), pen=pg.mkPen('y'), symbol='t1')
+        self.scatter_sell = pg.ScatterPlotItem(size=15, brush=pg.mkBrush(255, 0, 0, 255), pen=pg.mkPen('y'), symbol='t')
+
+        self.scatter_lows = pg.ScatterPlotItem(size=5, brush=pg.mkBrush(0, 255, 0, 255), pen=pg.mkPen('y'), symbol='o')
+        self.scatter_highs = pg.ScatterPlotItem(size=5, brush=pg.mkBrush(255, 0, 0, 255), pen=pg.mkPen('y'), symbol='o')
+
+        self.plot_price.addItem(self.scatter_buy)
+        self.plot_price.addItem(self.scatter_sell)
+        self.plot_price.addItem(self.scatter_lows)
+        self.plot_price.addItem(self.scatter_highs)
 
         self.curve_downtrend = self.plot_price.plot()
         self.curve_uptrend = self.plot_price.plot()
@@ -392,18 +406,8 @@ class MainWindow(pg.GraphicsView):
 
         self.curve_volume.setData(datetime_list, volume_list)
 
-        if "scatter" in ret_data:
-            data = []
-            for item in ret_data.get("scatter", []):
-                data.append({
-                    "symbol": item["symbol"],
-                    "size": item["size"],
-                    "pos": item["pos"],
-                    "brush": pg.mkBrush(item.get("color", "#000000")),
-                    "pen": pg.mkPen('y'),
-                })
-
-            self.scatter_price.setData(data)
+        self.scatter_sell.setData(spots=close_trades_candles)
+        self.scatter_buy.setData(spots=open_trades_candles)
 
         if 'macd' in ret_data:
             macd = ret_data.get('macd')

@@ -8,6 +8,7 @@ class Indicators:
         self.close = np.array([])
         self.high = np.array([])
         self.low = np.array([])
+        self.volume = np.array([])
         self.datetime = np.array([])
         self.psar = np.array([])
         self.ema200 = np.array([])
@@ -59,6 +60,14 @@ class Indicators:
     @low_array.setter
     def low_array(self, candles: list['Candle']):
         self.low = np.array(list(map(lambda x: x.p_low, candles)))
+
+    @property
+    def volume_array(self) -> np.array:
+        return self.volume
+
+    @volume_array.setter
+    def volume_array(self, candles: list['Candle']):
+        self.volume = np.array(list(map(lambda x: x.volume, candles)))
 
     @property
     def ema200_array(self) -> np.array:

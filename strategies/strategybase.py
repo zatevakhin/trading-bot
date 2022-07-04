@@ -32,6 +32,7 @@ class StrategyBase(ABC):
         self.indicators.close_array = candles
         self.indicators.high_array = candles
         self.indicators.low_array = candles
+        self.indicators.volume_array = candles
 
     def on_tick(self, candle: 'Candle') -> dict:
         self.chart.add(candle)
@@ -43,6 +44,7 @@ class StrategyBase(ABC):
         self.indicators.close_array = candles
         self.indicators.high_array = candles
         self.indicators.low_array = candles
+        self.indicators.volume_array = candles
 
         ret: dict = self.tick()
 

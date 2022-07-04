@@ -23,6 +23,8 @@ class Binance:
     def __init__(self, api_key: str, secret: str) -> None:
         self.api_key = str(api_key)
         self.secret = str(secret)
+        print(self.api_key)
+        print(self.secret)
         self.exchange_info = self.exchangeInfo()
 
     def _api_query(self, endpoint: str, api: str, data: dict = {}) -> dict:

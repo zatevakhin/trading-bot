@@ -30,7 +30,7 @@ class Strategy(StrategyBase):
 
         #--------------------------
         if retracementEnded:
-            self.open_trade(stop_loss_percent=1.0)
+            self.open_trade(stop_loss_percent=0.0)
 
         #--------------------------
 
